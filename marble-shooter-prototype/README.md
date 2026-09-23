@@ -17,6 +17,11 @@ phone's shape.
 - Glowing marbles hold powers: slow-down, reverse, bomb.
 - Consecutive hits build a streak bonus; misses reset it.
 - 1–3 stars per level depending on how close the chain got to the hole.
+- **The temple fights back:** curses and blessings strike mid-level, each announced by
+  a warning first and shown with a timer:
+  Mirror Curse (aim flipped), Ghost Marbles (shots pass through faded marbles),
+  Colour Shuffle (two colours swap; new runs pop), Twin Shot (shots split in two).
+  Bad curses show a "Lift · watch ad" button — a placeholder for a rewarded ad.
 - Three tracks (Coil, Serpent, Mirror Coil), synthesised sound effects, vibration
   on Android, screen shake, a heartbeat warning near the hole, saved level progress.
 
