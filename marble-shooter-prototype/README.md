@@ -1,32 +1,28 @@
-# Molecoil — molecular marble shooter prototype (working title)
+# Cozy Cure — a cozy virus-busting shooter (working title)
 
-A rogue polymer is crawling toward the nuclear pore. Fire atoms into the chain and match
-3 or more of one element to break it apart. One HTML file, no build step, no libraries.
+A chain of grumpy viruses is creeping toward your patient's heart. Send out friendly
+immune cells and match 3 or more of the same strain to wipe them out. If the virus
+reaches the heart, the monitor flatlines — and the patient gets another try.
+One HTML file, no build step, no libraries.
 
 ## Play it
-Open `index.html` in any browser, including Chrome on Android. Built phone-first: the
-board fills a portrait screen and adapts to the phone's shape.
+Open `index.html` in any browser, including Chrome on Android. Built phone-first.
 
-- Touch and hold to aim (the guide line shows which atom you will hit), release to fire.
-- Tap the nucleus (or right-click / press Space) to swap the loaded and next atom.
-- Pause button (or P / Esc); the game also pauses when you leave the app.
-- **Atoms** are elements — O, S, Cl, N, K — coloured after the chemists' CPK convention
-  where possible, with the symbol printed on each one.
-- **Chain reactions:** when the atoms on both sides of a gap match, the front of the chain
-  slides back and can pop again, raising the combo multiplier.
-- **Power atoms** (glowing): Freeze, Reverse reaction, Fission.
-- **Streaks:** consecutive hits add a bonus; a miss resets it.
-- **Mutations** strike mid-level, each announced first and shown with a timer:
-  Chirality Flip (aim mirrored), Quantum Tunnelling (shots pass through faded atoms),
-  Transmutation (two elements swap; new runs pop), Mitosis (shots divide in two).
-  Harmful ones show a "Repair · watch ad" button — a placeholder for a rewarded ad.
-- **Level select:** 10 demo levels, all unlocked, with track previews and saved stars
-  (1–3 per level, by how close the chain got to the pore).
-- **Ten tracks in five worlds** (Cytoplasm, Chlorophyll, Neuron, Blood, Plankton):
-  Helix, Villi, Synapse, Beta Sheet, Hairpins, Cilia, Membrane, Osmosis, Trefoil,
-  Supercoil. Where a track passes back over itself, the lower strand runs through a
-  membrane channel; atoms fade into it (never cut in half) and can't be hit inside.
-- Synthesised sound, vibration on Android, a heartbeat warning near the pore.
+- Touch and hold to aim (the guide line shows which virus you will hit), release to fire.
+- Tap the white blood cell (or right-click / press Space) to swap your immune cell.
+- **Five strains**, each with its own colour and spike shape (knobs, spikes, squares,
+  crowns, petals), so they're easy to tell apart for colour-blind players.
+- **Heart monitor** at the top: the heart rate climbs as the virus gets closer, the heart
+  at the end of the track beats along, and it flatlines if the virus gets in.
+- **Chain reactions**, **streaks**, **medicine power-ups** (Ice pack, Antiviral, Vaccine).
+- **Mutations** mid-level: Dizzy Fever (aim mirrored), Stealth Strain (shots pass through
+  hidden viruses), Mutation (two strains swap), Booster Shot (shots double). Harmful ones
+  show a "Cure · watch ad" placeholder button.
+- **Ten body levels** in five warm worlds (Blush, Peach, Honey, Berry, Cocoa): Bloodstream,
+  Intestine, Nerve, Ribs, Lymph Nodes, Airways, Stomach, Kidney, Heart Valves, Brain.
+- **Sound:** a soft, warm low-passed mix — marimba-like pops, a heartbeat when the virus
+  is close — and a slow cosy music loop (pad chords, round bass, music-box melody), all
+  generated in code. Separate music and sound buttons.
 
 ## How it works (in `index.html`)
 - **Track:** each track is a list of points (built with formulas or the `pen` helper:
