@@ -24,9 +24,10 @@ phone's shape.
   Bad curses show a "Lift · watch ad" button — a placeholder for a rewarded ad.
 - **Level select:** 10 demo levels, all unlocked, each with a track preview and the
   stars you've earned.
-- Five tracks with curves and stone tunnels (marbles inside a tunnel are hidden and
-  can't be hit): Coil, Serpent (rippling rows + arch), Crossing (runs under its own
-  ring), Keyhole (rounded-square spiral), Mirror Coil
+- Five tracks. Where a track passes back over itself, the lower strand runs through a
+  stone tunnel under a bridge (marbles in a tunnel are hidden and can't be hit):
+  Coil, Serpent (rippling rows), Crossing (drops in under its own ring),
+  Curls (each row ties a loop that crosses itself), Keyhole (enters under two rings).
 - Synthesised sound effects, vibration
   on Android, screen shake, a heartbeat warning near the hole, saved level progress.
 
@@ -41,8 +42,11 @@ phone's shape.
 - **Retraction/combos:** a front segment slides back when the colours on both
   sides of its gap match; hitting the back segment re-checks for a match and
   raises the combo multiplier.
-- **Tunnels:** track points carry an `inTunnel` flag. Roofs, bridges and tunnel mouths are
-  drawn on a foreground layer above the marbles; marbles on a bridge are redrawn on top.
+- **Tunnels:** `buildPath` finds crossings automatically — any point closer than a
+  groove width to a part of the track at least 100px earlier becomes a tunnel. Roofs,
+  bridges and tunnel mouths are drawn on a foreground layer above the marbles; marbles
+  on a bridge are redrawn on top. New tracks can be sketched with the `pen` helper
+  (`fwd`, `arc`).
 - **Levels:** longer, faster chains, a 5th colour from level 3, and the track rotates (`levelCfg`, `TRACKS`).
   Chain speed is scaled by track length so short tracks stay fair.
 

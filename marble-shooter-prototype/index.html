@@ -239,82 +239,109 @@
 
   // ---- Tracks (built for the current logical height H) -------------------------
   let H = 760;
-  // Raw points are [x, y, inTunnel]. Marbles inside a tunnel are hidden and cannot be hit.
-  function coil(mirror, tunnels) {
+  // Tracks are drawn as point lists; wherever a later part of the track passes over an
+  // earlier part, that later part becomes a tunnel under a bridge (see buildPath).
+  function coil(mirror) {
     const cx = 200, cy = Math.round(H / 2 + 20);
     const rx0 = 180, rx1 = 64, ry0 = Math.min(320, cy - 110, H - cy - 40), ry1 = 84, turns = 2.6;
     const raw = [];
-    for (let y = H + 40; y > cy; y -= 4) raw.push([cx - rx0, y, tunnels && y > H - 110]);
+    for (let y = H + 40; y > cy; y -= 4) raw.push([cx - rx0, y]);
     const N = 3600;
     for (let i = 0; i <= N; i++) {
       const t = i / N, a = Math.PI + t * turns * TAU;
-      // Tunnel over part of the outer ring (first lap only).
-      const tun = tunnels && t < 1 / turns && a > 1.22 * Math.PI && a < 1.62 * Math.PI;
-      raw.push([cx + (rx0 + (rx1 - rx0) * t) * Math.cos(a), cy + (ry0 + (ry1 - ry0) * t) * Math.sin(a), tun]);
+      raw.push([cx + (rx0 + (rx1 - rx0) * t) * Math.cos(a), cy + (ry0 + (ry1 - ry0) * t) * Math.sin(a)]);
     }
     if (mirror) for (const p of raw) p[0] = W - p[0];
     return { raw, sx: cx, sy: cy };
   }
-  // Rows that ripple gently; a stone arch covers the middle of the second row.
+  // Rows that ripple gently, joined by round turns.
   function serpent() {
     const raw = [], xL = 52, xR = 348, gap = 72, r = gap / 2, y0 = 124, A = 11;
     const n = Math.max(4, Math.floor((H - y0 - 260) / gap) + 1);
     const wave = (x) => { const u = (x - xL) / (xR - xL); return A * Math.sin(4 * Math.PI * u) * Math.sin(Math.PI * u); };
-    const rowPt = (x, y, row) => [x, y + (x >= xL && x <= xR ? wave(x) : 0), row === 1 && x > 136 && x < 264];
+    const rowPt = (x, y) => [x, y + (x >= xL && x <= xR ? wave(x) : 0)];
     let y = y0;
-    for (let x = -40; x < xR; x += 2) raw.push(rowPt(x, y, 0));
+    for (let x = -40; x < xR; x += 2) raw.push(rowPt(x, y));
     for (let row = 0; row < n - 1; row++) {
       const right = row % 2 === 0;                    // direction of the row we are leaving
       const tx = right ? xR : xL, ty = y + r;
       for (let k = 0; k <= 60; k++) {
         const a = -Math.PI / 2 + (right ? 1 : -1) * (k / 60) * Math.PI;
-        raw.push([tx + r * Math.cos(a), ty + r * Math.sin(a), false]);
+        raw.push([tx + r * Math.cos(a), ty + r * Math.sin(a)]);
       }
       y += gap;
       // After a turn on the right the next row runs leftwards, and vice versa.
       const end = row === n - 2 ? 200 : (right ? xL : xR);
-      if (right) for (let x = xR; x > end; x -= 2) raw.push(rowPt(x, y, row + 1));
-      else for (let x = xL; x < end; x += 2) raw.push(rowPt(x, y, row + 1));
+      if (right) for (let x = xR; x > end; x -= 2) raw.push(rowPt(x, y));
+      else for (let x = xL; x < end; x += 2) raw.push(rowPt(x, y));
     }
     return { raw, sx: 200, sy: H - 120 };
   }
-  // The chain drops in from the top through a tunnel that runs under its own outer ring, then spirals outwards.
+  // The chain drops in from the top, passes under its own ring, then spirals outwards.
   function crossing() {
     const cx = 200, cy = Math.round(Math.min(H - 209, Math.max(278, H * 0.52)));
-    const r0 = 104, r1 = 184, turns = 1.6, rCross = r0 + (r1 - r0) / turns;
+    const r0 = 104, r1 = 184, turns = 1.6;
     const raw = [];
-    for (let y = -40; y < cy - r0; y += 2) {
-      const tun = y < 100 || (y > cy - rCross - 44 && y < cy - r0 - 12);
-      raw.push([cx, y, tun]);
-    }
+    for (let y = -40; y < cy - r0; y += 2) raw.push([cx, y]);
     const N = 3000;
     for (let i = 0; i <= N; i++) {
       const t = i / N, a = -Math.PI / 2 + t * turns * TAU, r = r0 + (r1 - r0) * t;
-      raw.push([cx + r * Math.cos(a), cy + r * Math.sin(a), false]);
+      raw.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
     }
     return { raw, sx: cx, sy: cy };
   }
-  // A rounded-square spiral (superellipse) entering from a tunnel at the bottom.
+  // A pen that walks forwards and turns along arcs (angles in degrees; positive turns clockwise on screen).
+  function pen(x, y, heading) {
+    const raw = [[x, y]];
+    let h = heading * Math.PI / 180;
+    return {
+      raw,
+      get x() { return x; },
+      fwd(len) { const n = Math.max(1, Math.ceil(len / 2)); for (let i = 0; i < n; i++) { x += Math.cos(h) * len / n; y += Math.sin(h) * len / n; raw.push([x, y]); } },
+      arc(r, deg) {
+        const n = Math.max(2, Math.ceil(Math.abs(deg) * r * Math.PI / 180 / 1.5)), dh = deg * Math.PI / 180 / n, step = r * Math.abs(dh);
+        for (let i = 0; i < n; i++) { h += dh / 2; x += Math.cos(h) * step; y += Math.sin(h) * step; h += dh / 2; raw.push([x, y]); }
+      },
+    };
+  }
+  // Wide rows joined by big turns; every row but the last ties a loop that crosses back over itself.
+  function curls() {
+    const xL = 90, xR = 310, gap = 150, rU = gap / 2, y0 = 128;
+    const n = Math.max(2, Math.floor((H - y0 - 250) / gap) + 1);
+    const P = pen(-40, y0, 0);
+    // One loop: 50° bend, straight, 260° around, straight, 50° bend. Its start-to-end span is ~87px.
+    const loop = (dir) => { P.arc(40, 50 * dir); P.fwd(56); P.arc(30, 260 * dir); P.fwd(56); P.arc(40, 50 * dir); };
+    const LOOP_HALF = 43.6;
+    for (let row = 0; row < n; row++) {
+      const east = row % 2 === 0, last = row === n - 1, sign = east ? 1 : -1;
+      if (last) { P.fwd(Math.abs(200 - P.x)); break; }
+      P.fwd(Math.abs(200 - LOOP_HALF * sign - P.x));
+      loop(sign);                                   // loops hang below the row
+      P.fwd(Math.abs((east ? xR : xL) - P.x));
+      P.arc(rU, 180 * sign);                        // turn down into the next row
+    }
+    return { raw: P.raw, sx: 200, sy: H - 110 };
+  }
+  // A rounded-square spiral. The chain comes in from the left and passes under two of its rings.
   function keyhole() {
     const cx = 200, cy = Math.round(H / 2 + 20);
-    const rx0 = 176, rx1 = 62, ry0 = Math.min(300, cy - 120, H - cy - 50), ry1 = 90, turns = 2.2;
+    const rx0 = 62, rx1 = 176, ry0 = 90, ry1 = Math.min(300, cy - 120, H - cy - 50), turns = 2.4, a0 = Math.PI + 0.11;
     const se = (v) => Math.sign(v) * Math.sqrt(Math.abs(v));
+    const pt = (t) => { const a = a0 + t * turns * TAU; return [cx + (rx0 + (rx1 - rx0) * t) * se(Math.cos(a)), cy + (ry0 + (ry1 - ry0) * t) * se(Math.sin(a))]; };
+    const [bx, by] = pt(0), er = 30;
     const raw = [];
-    for (let y = H + 40; y > cy; y -= 4) raw.push([cx - rx0, y, y > H - 120]);
+    for (let x = -40; x < bx - er; x += 2) raw.push([x, by + er]);
+    for (let k = 0; k <= 30; k++) { const a = Math.PI / 2 - (k / 30) * Math.PI / 2; raw.push([bx - er + er * Math.cos(a), by + er * Math.sin(a)]); }
     const N = 12000;
-    for (let i = 0; i <= N; i++) {
-      const t = i / N, a = Math.PI + t * turns * TAU;
-      const tun = t < 1 / turns && a > 1.36 * Math.PI && a < 1.64 * Math.PI;
-      raw.push([cx + (rx0 + (rx1 - rx0) * t) * se(Math.cos(a)), cy + (ry0 + (ry1 - ry0) * t) * se(Math.sin(a)), tun]);
-    }
+    for (let i = 0; i <= N; i++) raw.push(pt(i / N));
     return { raw, sx: cx, sy: cy };
   }
   const TRACKS = [
-    { name: 'Coil', build: () => coil(false, false) },
+    { name: 'Coil', build: () => coil(false) },
     { name: 'Serpent', build: serpent },
     { name: 'Crossing', build: crossing },
+    { name: 'Curls', build: curls },
     { name: 'Keyhole', build: keyhole },
-    { name: 'Mirror Coil', build: () => coil(true, true) },
   ];
   const DEMO_LEVELS = 10;
 
@@ -402,25 +429,39 @@
   paintSoundBtn();
 
   // ---- Path lookup: one point per pixel of track length -----------------------
-  // PT[s] = 1 inside a tunnel; PB[s] = 1 where the track runs over a tunnel roof (a bridge).
-  let PX = [], PY = [], PT = [], PB = null, PLEN = 0, TUNNELS = [];
-  function setTrack(track) {
+  // Resample a track to one point per pixel of length. Where the track passes back over an
+  // earlier part of itself, the later pass is marked as a tunnel: PT[s] = 1.
+  const CROSS_DIST = D + 12;        // closer than this (and far apart along the track) = a crossing
+  const CROSS_GAP = 100;            // points closer than this along the track are just neighbours
+  function buildPath(track) {
     const { raw, sx, sy } = track.build();
-    PX = [raw[0][0]]; PY = [raw[0][1]]; PT = [raw[0][2] ? 1 : 0];
+    const X = [raw[0][0]], Y = [raw[0][1]];
     let acc = 0, next = 0;
     for (let i = 1; i < raw.length; i++) {
-      const [x0, y0, t0] = raw[i - 1], [x1, y1, t1] = raw[i];
+      const [x0, y0] = raw[i - 1], [x1, y1] = raw[i];
       const seg = Math.hypot(x1 - x0, y1 - y0);
       while (next + 1 <= acc + seg) {
         next += 1;
         const f = (next - acc) / seg;
-        PX.push(x0 + (x1 - x0) * f);
-        PY.push(y0 + (y1 - y0) * f);
-        PT.push(t0 && t1 ? 1 : 0);
+        X.push(x0 + (x1 - x0) * f);
+        Y.push(y0 + (y1 - y0) * f);
       }
       acc += seg;
     }
-    PLEN = PX.length - 1;
+    const n = X.length - 1, T = new Uint8Array(n + 1), lim = CROSS_DIST * CROSS_DIST;
+    for (let j = CROSS_GAP; j <= n; j++) {
+      for (let i = 0; i <= j - CROSS_GAP; i += 2) {
+        const dx = X[i] - X[j], dy = Y[i] - Y[j];
+        if (dx * dx + dy * dy < lim) { T[j] = 1; break; }
+      }
+    }
+    return { X, Y, T, n, sx, sy };
+  }
+  // PB[s] = 1 where the track runs over a tunnel roof (a bridge).
+  let PX = [], PY = [], PT = [], PB = null, PLEN = 0, TUNNELS = [];
+  function setTrack(track) {
+    const r = buildPath(track);
+    PX = r.X; PY = r.Y; PT = r.T; PLEN = r.n;
     TUNNELS = [];
     for (let i = 0; i <= PLEN; i++) {
       if (PT[i] && (i === 0 || !PT[i - 1])) TUNNELS.push([i, i]);
@@ -434,7 +475,7 @@
         if ((PX[i] - PX[j]) ** 2 + (PY[i] - PY[j]) ** 2 < lim) PB[i] = 1;
       }
     }
-    sh.x = sx; sh.y = sy;
+    sh.x = r.sx; sh.y = r.sy;
   }
   const inTunnel = (s) => s > 0 && s < PLEN && PT[Math.round(s)] === 1;
   function at(s) {
@@ -848,18 +889,18 @@
     c.width = tw * dpr; c.height = th * dpr;
     const g = c.getContext('2d');
     g.scale(k * dpr, k * dpr);
-    const { raw, sx, sy } = track.build();
+    const { X, Y, T, n, sx, sy } = buildPath(track);
     g.lineCap = 'round'; g.lineJoin = 'round';
     const stroke = (tun, col, w) => {
       g.strokeStyle = col; g.lineWidth = w; g.beginPath();
       let on = false;
-      for (const [x, y, t] of raw) {
-        if (!!t === tun) { on ? g.lineTo(x, y) : g.moveTo(x, y); on = true; } else on = false;
+      for (let i = 0; i <= n; i += 2) {
+        if (!!T[i] === tun) { on ? g.lineTo(X[i], Y[i]) : g.moveTo(X[i], Y[i]); on = true; } else on = false;
       }
       g.stroke();
     };
+    stroke(true, '#6e5b39', 40);
     stroke(false, '#e2bd6b', 18);
-    stroke(true, '#6e5b39', 34);
     g.fillStyle = '#efe7d6';
     g.beginPath(); g.arc(sx, sy, 26, 0, TAU); g.fill();
     const url = c.toDataURL();
