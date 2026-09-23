@@ -1,0 +1,628 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
+<title>Scarab Coil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;700&display=swap">
+<style>
+  :root {
+    color-scheme: dark;
+    --night: #141a26;
+    --night-deep: #0b0f17;
+    --sand: #e2bd6b;
+    --sand-dim: #9b8456;
+    --ink: #efe7d6;
+    --muted: #a3a8b6;
+    --veil: rgba(10, 13, 20, 0.66);
+  }
+  html, body { height: 100%; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    padding-inline: 16px;
+    box-sizing: border-box;
+    background: var(--night);
+    color: var(--ink);
+    font-family: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+    overflow: hidden;
+  }
+  .app {
+    height: 100%;
+    max-width: 560px;
+    margin: 0 auto;
+    padding-block: 10px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px 16px;
+  }
+  h1 {
+    margin: 0;
+    font-family: "Lilita One", "Arial Rounded MT Bold", system-ui, sans-serif;
+    font-weight: 400;
+    font-size: 26px;
+    letter-spacing: 0.02em;
+    color: var(--sand);
+  }
+  .stats { display: flex; gap: 18px; margin: 0; }
+  .stats div { display: flex; flex-direction: column; align-items: flex-end; }
+  .stats dt {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+  }
+  .stats dd {
+    margin: 0;
+    font-family: "Lilita One", "Arial Rounded MT Bold", system-ui, sans-serif;
+    font-size: 19px;
+    font-variant-numeric: tabular-nums;
+  }
+  .stage { flex: 1; min-height: 0; display: grid; place-items: center; }
+  .board {
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(226, 189, 107, 0.2), 0 18px 48px rgba(0, 0, 0, 0.5);
+  }
+  canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: var(--veil);
+    backdrop-filter: blur(2px);
+  }
+  .card { text-align: center; max-width: 290px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .eyebrow {
+    margin: 0;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--sand-dim);
+  }
+  .card h2 {
+    margin: 0;
+    font-family: "Lilita One", "Arial Rounded MT Bold", system-ui, sans-serif;
+    font-weight: 400;
+    font-size: 32px;
+    line-height: 1.05;
+    color: var(--sand);
+    text-wrap: balance;
+  }
+  .card p.body { margin: 0; line-height: 1.5; color: var(--ink); }
+  .card button {
+    margin-top: 6px;
+    font: 400 18px "Lilita One", "Arial Rounded MT Bold", system-ui, sans-serif;
+    letter-spacing: 0.03em;
+    color: var(--night);
+    background: var(--sand);
+    border: 0;
+    border-radius: 999px;
+    padding: 12px 26px;
+    cursor: pointer;
+  }
+  .card button:hover { filter: brightness(1.08); }
+  .card button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+  .hint { margin: 0; text-align: center; font-size: 12px; color: var(--muted); }
+</style>
+
+<div class="app">
+  <header class="bar">
+    <h1>Scarab Coil</h1>
+    <dl class="stats">
+      <div><dt>Level</dt><dd id="hudLevel">1</dd></div>
+      <div><dt>Score</dt><dd id="hudScore">0</dd></div>
+      <div><dt>Marbles</dt><dd id="hudLeft">0</dd></div>
+    </dl>
+  </header>
+  <main class="stage" id="stage">
+    <div class="board" id="board">
+      <canvas id="cv" aria-label="Game board: a spiral track with a chain of marbles and a scarab shooter in the middle"></canvas>
+      <div class="overlay" id="overlay">
+        <div class="card">
+          <p class="eyebrow" id="ovEyebrow">Marble shooter prototype</p>
+          <h2 id="ovTitle">Scarab Coil</h2>
+          <p class="body" id="ovText">Marbles roll along the spiral toward the hole. Shoot marbles into the chain to make groups of 3 or more of one colour. Clear the chain before it reaches the end.</p>
+          <button id="ovBtn" type="button">Start level 1</button>
+        </div>
+      </div>
+    </div>
+  </main>
+  <p class="hint">Aim, then release to shoot · tap the scarab (or right-click, or Space) to swap marbles</p>
+</div>
+
+<script>
+(() => {
+  // ---- Constants -----------------------------------------------------------
+  const W = 400, H = 600;          // logical board size; scaled to fit the screen
+  const R = 14, D = R * 2;         // marble radius / diameter
+  const TAU = Math.PI * 2;
+  const SHOT_SPEED = 950;          // px per second
+  const RETRACT_SPEED = 260;       // how fast a front segment slides back to a matching colour
+  const SX = 200, SY = 300;        // shooter position (spiral centre)
+
+  // Each colour also has a symbol so the game stays playable for colour-blind players.
+  const COLORS = [
+    { fill: '#e0474c', hi: '#ffb3b0', lo: '#7d1a22', sym: 'tri' },
+    { fill: '#eeb02c', hi: '#fff0b8', lo: '#8a5a07', sym: 'diamond' },
+    { fill: '#2fae78', hi: '#b5f5d6', lo: '#0f5a3a', sym: 'dot' },
+    { fill: '#3a7de8', hi: '#bcd6ff', lo: '#163a80', sym: 'ring' },
+    { fill: '#9d5ae0', hi: '#e2c8ff', lo: '#4a2280', sym: 'cross' },
+  ];
+
+  const levelCfg = (l) => ({
+    count: 40 + l * 10,                    // marbles in the chain
+    colors: Math.min(5, 3 + Math.ceil(l / 2)),
+    speed: 24 + l * 4,                     // normal crawl speed, px per second
+    rush: 0.28,                            // fraction of the track the chain rushes in at the start
+  });
+
+  // ---- DOM -----------------------------------------------------------------
+  const $ = (id) => document.getElementById(id);
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  const stage = $('stage'), board = $('board');
+  const overlay = $('overlay'), ovEyebrow = $('ovEyebrow'), ovTitle = $('ovTitle'), ovText = $('ovText'), ovBtn = $('ovBtn');
+  const hud = { level: $('hudLevel'), score: $('hudScore'), left: $('hudLeft') };
+
+  // ---- Path: an entry channel plus an Archimedean spiral, resampled every 1px --
+  let PX = [], PY = [], PLEN = 0;
+  function buildPath() {
+    const raw = [];
+    const r0 = 184, r1 = 70, turns = 2.25;
+    const sx = SX - r0, sy = SY;
+    for (let y = H + 40; y > sy; y -= 4) raw.push([sx, y]);
+    const N = 3000;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      const a = Math.PI + t * turns * TAU;
+      const r = r0 + (r1 - r0) * t;
+      raw.push([SX + r * Math.cos(a), SY + r * Math.sin(a)]);
+    }
+    PX = [raw[0][0]]; PY = [raw[0][1]];
+    let acc = 0, next = 0;
+    for (let i = 1; i < raw.length; i++) {
+      const [x0, y0] = raw[i - 1], [x1, y1] = raw[i];
+      const seg = Math.hypot(x1 - x0, y1 - y0);
+      while (next + 1 <= acc + seg) {
+        next += 1;
+        const f = (next - acc) / seg;
+        PX.push(x0 + (x1 - x0) * f);
+        PY.push(y0 + (y1 - y0) * f);
+      }
+      acc += seg;
+    }
+    PLEN = PX.length - 1;
+  }
+  // Position on the track at distance s.
+  function at(s) {
+    if (s <= 0) return [PX[0], PY[0]];
+    if (s >= PLEN) return [PX[PLEN], PY[PLEN]];
+    const i = Math.floor(s), f = s - i;
+    return [PX[i] + (PX[i + 1] - PX[i]) * f, PY[i] + (PY[i + 1] - PY[i]) * f];
+  }
+  buildPath();
+
+  // ---- State -----------------------------------------------------------------
+  // chain[0] is the marble closest to the hole; s = distance along the track, rs = drawn (smoothed) distance.
+  let state = 'ready';             // ready | play | drain | win | lose
+  let level = 1, score = 0, levelStartScore = 0, combo = 0, rushing = true;
+  let cfg = levelCfg(1);
+  let chain = [], shots = [], parts = [], texts = [];
+  const sh = { angle: -Math.PI / 2, cur: 0, next: 1, cool: 0, swapT: 0 };
+  let best = 0;
+  try { best = Number(localStorage.getItem('scarab-coil-best')) || 0; } catch (e) {}
+
+  const rnd = (n) => Math.floor(Math.random() * n);
+
+  function genChain() {
+    chain = [];
+    let prev = -1, run = 0;
+    for (let i = 0; i < cfg.count; i++) {
+      let c;
+      if (prev >= 0 && run < 2 && Math.random() < 0.4) c = prev;   // pairs are allowed, triples are not
+      else { do { c = rnd(cfg.colors); } while (c === prev && cfg.colors > 1); }
+      run = c === prev ? run + 1 : 1;
+      prev = c;
+      chain.push({ c, s: -i * D, rs: -i * D });
+    }
+  }
+
+  // Shooter only gets colours that are still in the chain.
+  function pickColor() {
+    const present = new Set();
+    for (const b of chain) if (b.s > -D * 6) present.add(b.c);
+    if (!present.size) for (const b of chain) present.add(b.c);
+    const arr = [...present];
+    return arr.length ? arr[rnd(arr.length)] : rnd(cfg.colors);
+  }
+
+  function startLevel() {
+    cfg = levelCfg(level);
+    genChain();
+    shots = []; parts = []; texts = [];
+    combo = 0; rushing = true;
+    levelStartScore = score;
+    sh.cur = pickColor(); sh.next = pickColor();
+    state = 'play';
+    overlay.hidden = true;
+  }
+
+  // Push marbles forward so neighbours never overlap (no movement otherwise).
+  function settle() {
+    for (let i = chain.length - 2; i >= 0; i--) {
+      const need = chain[i + 1].s + D;
+      if (chain[i].s < need) chain[i].s = need;
+    }
+  }
+
+  // Remove the run of same-coloured, touching marbles around index k if it is 3+ long.
+  function resolveMatch(k) {
+    if (k < 0 || k >= chain.length) return false;
+    const c = chain[k].c;
+    let a = k, b = k;
+    while (a > 0 && chain[a - 1].c === c && chain[a - 1].s - chain[a].s <= D + 0.5) a--;
+    while (b < chain.length - 1 && chain[b + 1].c === c && chain[b].s - chain[b + 1].s <= D + 0.5) b++;
+    const cnt = b - a + 1;
+    if (cnt < 3) return false;
+    const mult = Math.max(1, combo);
+    const pts = cnt * 10 * mult;
+    score += pts;
+    const mid = at(chain[Math.floor((a + b) / 2)].rs);
+    texts.push({ x: mid[0], y: mid[1], str: (combo > 1 ? `Combo ×${combo}  ` : '') + '+' + pts, life: 1.1 });
+    for (let i = a; i <= b; i++) burst(chain[i]);
+    chain.splice(a, cnt);
+    return true;
+  }
+
+  function burst(b) {
+    const p = at(b.rs);
+    for (let k = 0; k < 7; k++) {
+      const a = Math.random() * TAU, sp = 60 + Math.random() * 130;
+      parts.push({ x: p[0], y: p[1], vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.5, max: 0.5, c: b.c });
+    }
+  }
+
+  function stepChain(dt) {
+    const n = chain.length;
+    if (!n) return;
+    // Split into touching segments.
+    const starts = [0];
+    for (let i = 0; i < n - 1; i++) if (chain[i].s - chain[i + 1].s > D + 0.5) starts.push(i + 1);
+    // A front segment slides back when the marbles on both sides of its gap share a colour.
+    const retracting = new Set();
+    for (let k = 1; k < starts.length; k++) {
+      const a = starts[k] - 1, b = starts[k];
+      if (chain[a].c === chain[b].c) {
+        for (let i = starts[k - 1]; i <= a; i++) chain[i].s -= RETRACT_SPEED * dt;
+        retracting.add(a);
+      }
+    }
+    if (rushing && chain[0].s >= PLEN * cfg.rush) rushing = false;
+    let v = rushing ? 340 : cfg.speed;
+    if (!rushing && chain[0].s > PLEN - 260) v *= 0.6;   // a little mercy near the hole
+    // Only the last marble is pushed; it pushes everything it touches.
+    chain[n - 1].s += v * dt;
+    let hit = -1;
+    for (let i = n - 2; i >= 0; i--) {
+      const need = chain[i + 1].s + D;
+      if (chain[i].s < need) {
+        if (retracting.has(i) && hit < 0) hit = i + 1;
+        chain[i].s = need;
+      }
+    }
+    if (hit >= 0) { combo++; if (!resolveMatch(hit)) combo = 0; }
+    if (chain.length && chain[0].s >= PLEN - R) { state = 'drain'; combo = 0; }
+  }
+
+  function insertShot(s, i) {
+    const b = chain[i];
+    const f = at(b.s + R), k = at(b.s - R);
+    const front = (s.x - f[0]) ** 2 + (s.y - f[1]) ** 2 < (s.x - k[0]) ** 2 + (s.y - k[1]) ** 2;
+    const nb = { c: s.c, s: front ? b.s + D : b.s, rs: b.s + (front ? R : -R) };
+    const idx = front ? i : i + 1;
+    chain.splice(idx, 0, nb);
+    settle();
+    combo = 1;
+    if (!resolveMatch(idx)) combo = 0;
+  }
+
+  function stepShots(dt) {
+    const steps = 3;
+    for (const s of shots) {
+      for (let k = 0; k < steps && !s.dead; k++) {
+        s.x += s.vx * dt / steps;
+        s.y += s.vy * dt / steps;
+        if (s.x < -R || s.x > W + R || s.y < -R || s.y > H + R) { s.dead = true; break; }
+        if (state !== 'play') continue;
+        for (let i = 0; i < chain.length; i++) {
+          const b = chain[i];
+          if (b.s < R) continue;
+          const p = at(b.s);
+          const dx = p[0] - s.x, dy = p[1] - s.y;
+          if (dx * dx + dy * dy < (D * 0.92) ** 2) { insertShot(s, i); s.dead = true; break; }
+        }
+      }
+    }
+    shots = shots.filter((s) => !s.dead);
+  }
+
+  function update(dt) {
+    sh.cool = Math.max(0, sh.cool - dt);
+    sh.swapT = Math.max(0, sh.swapT - dt);
+    if (state === 'play') stepChain(dt);
+    else if (state === 'drain') {
+      for (const b of chain) b.s += 720 * dt;
+      chain = chain.filter((b) => b.s < PLEN);
+      if (!chain.length) endLose();
+    }
+    for (const b of chain) b.rs += (b.s - b.rs) * Math.min(1, dt * 18);
+    stepShots(dt);
+    for (const p of parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.92; p.vy *= 0.92; p.life -= dt; }
+    parts = parts.filter((p) => p.life > 0);
+    for (const t of texts) { t.y -= 28 * dt; t.life -= dt; }
+    texts = texts.filter((t) => t.life > 0);
+    if (state === 'play') {
+      if (chain.length) {
+        const set = new Set(chain.map((b) => b.c));
+        if (!set.has(sh.cur)) sh.cur = pickColor();
+        if (!set.has(sh.next)) sh.next = pickColor();
+      } else if (!shots.length) endWin();
+    }
+  }
+
+  function saveBest() {
+    if (score > best) {
+      best = score;
+      try { localStorage.setItem('scarab-coil-best', String(best)); } catch (e) {}
+    }
+  }
+  function showOverlay(eyebrow, title, text, btn) {
+    ovEyebrow.textContent = eyebrow; ovTitle.textContent = title; ovText.textContent = text; ovBtn.textContent = btn;
+    overlay.hidden = false;
+    ovBtn.focus({ preventScroll: true });
+  }
+  function endWin() {
+    state = 'win'; saveBest();
+    showOverlay(`Level ${level} cleared`, 'Chain broken!', `Score ${score} · Best ${best}. The next chain is longer and faster.`, `Start level ${level + 1}`);
+  }
+  function endLose() {
+    state = 'lose'; saveBest();
+    showOverlay(`Level ${level}`, 'The chain reached the hole', `Score ${score} · Best ${best}.`, 'Try again');
+  }
+  ovBtn.addEventListener('click', () => {
+    if (state === 'win') level++;
+    else if (state === 'lose') score = levelStartScore;
+    startLevel();
+  });
+
+  // ---- Input -----------------------------------------------------------------
+  function toLocal(e) {
+    const r = cv.getBoundingClientRect();
+    return [(e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H];
+  }
+  const onShooter = (x, y) => Math.hypot(x - SX, y - SY) < 32;
+  function aimAt(x, y) { sh.angle = Math.atan2(y - SY, x - SX); }
+  function fire() {
+    if (state !== 'play' || sh.cool > 0) return;
+    const a = sh.angle;
+    shots.push({ x: SX + Math.cos(a) * 30, y: SY + Math.sin(a) * 30, vx: Math.cos(a) * SHOT_SPEED, vy: Math.sin(a) * SHOT_SPEED, c: sh.cur });
+    sh.cur = sh.next; sh.next = pickColor(); sh.cool = 0.18;
+  }
+  function swap() {
+    if (state !== 'play') return;
+    [sh.cur, sh.next] = [sh.next, sh.cur];
+    sh.swapT = 0.2;
+  }
+  let pointerDown = false, downOnShooter = false;
+  cv.addEventListener('pointermove', (e) => {
+    const [x, y] = toLocal(e);
+    if (!onShooter(x, y)) aimAt(x, y);
+  });
+  cv.addEventListener('pointerdown', (e) => {
+    if (e.button === 2) return;
+    e.preventDefault();
+    const [x, y] = toLocal(e);
+    pointerDown = true;
+    downOnShooter = onShooter(x, y);
+    if (!downOnShooter) aimAt(x, y);
+    try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  cv.addEventListener('pointerup', (e) => {
+    if (!pointerDown) return;
+    pointerDown = false;
+    const [x, y] = toLocal(e);
+    if (downOnShooter) { if (onShooter(x, y)) swap(); }
+    else fire();
+  });
+  cv.addEventListener('pointercancel', () => { pointerDown = false; });
+  cv.addEventListener('contextmenu', (e) => { e.preventDefault(); swap(); });
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && state === 'play') { e.preventDefault(); swap(); }
+  });
+
+  // ---- Rendering ---------------------------------------------------------------
+  let S = 1, DPR = 1, bg = null;
+  const GRADS = COLORS.map((c) => {
+    const g = ctx.createRadialGradient(-4, -5, 1, 0, 0, R);
+    g.addColorStop(0, c.hi); g.addColorStop(0.5, c.fill); g.addColorStop(1, c.lo);
+    return g;
+  });
+
+  function resize() {
+    const box = stage.getBoundingClientRect();
+    S = Math.max(0.3, Math.min(box.width / W, box.height / H));
+    DPR = Math.min(3, window.devicePixelRatio || 1);
+    board.style.width = W * S + 'px';
+    board.style.height = H * S + 'px';
+    cv.width = Math.round(W * S * DPR);
+    cv.height = Math.round(H * S * DPR);
+    buildBg();
+  }
+
+  function buildBg() {
+    bg = document.createElement('canvas');
+    bg.width = cv.width; bg.height = cv.height;
+    const g = bg.getContext('2d');
+    g.setTransform(S * DPR, 0, 0, S * DPR, 0, 0);
+    g.fillStyle = '#141a26'; g.fillRect(0, 0, W, H);
+    const rg = g.createRadialGradient(SX, SY, 10, SX, SY, 300);
+    rg.addColorStop(0, 'rgba(226,189,107,0.11)'); rg.addColorStop(1, 'rgba(226,189,107,0)');
+    g.fillStyle = rg; g.fillRect(0, 0, W, H);
+    let seed = 7;
+    const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 420; i++) {
+      g.fillStyle = `rgba(226,189,107,${0.03 + r() * 0.09})`;
+      g.fillRect(r() * W, r() * H, 1.2, 1.2);
+    }
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    const trace = () => {
+      g.beginPath(); g.moveTo(PX[0], PY[0]);
+      for (let i = 3; i <= PLEN; i += 3) g.lineTo(PX[i], PY[i]);
+      g.lineTo(PX[PLEN], PY[PLEN]);
+    };
+    trace(); g.strokeStyle = 'rgba(226,189,107,0.24)'; g.lineWidth = D + 12; g.stroke();
+    trace(); g.strokeStyle = '#0b0f17'; g.lineWidth = D + 6; g.stroke();
+    trace(); g.strokeStyle = 'rgba(226,189,107,0.07)'; g.lineWidth = 2; g.stroke();
+  }
+
+  function drawSymbol(sym) {
+    ctx.beginPath();
+    switch (sym) {
+      case 'tri': ctx.moveTo(0, -5); ctx.lineTo(4.6, 3.6); ctx.lineTo(-4.6, 3.6); ctx.closePath(); ctx.fill(); break;
+      case 'diamond': ctx.moveTo(0, -5.2); ctx.lineTo(5.2, 0); ctx.lineTo(0, 5.2); ctx.lineTo(-5.2, 0); ctx.closePath(); ctx.fill(); break;
+      case 'dot': ctx.arc(0, 0, 3.6, 0, TAU); ctx.fill(); break;
+      case 'ring': ctx.arc(0, 0, 4, 0, TAU); ctx.lineWidth = 2.2; ctx.stroke(); break;
+      case 'cross': ctx.moveTo(-3.8, -3.8); ctx.lineTo(3.8, 3.8); ctx.moveTo(3.8, -3.8); ctx.lineTo(-3.8, 3.8); ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.stroke(); break;
+    }
+  }
+
+  function drawBall(x, y, c, scale) {
+    ctx.save();
+    ctx.translate(x, y);
+    if (scale !== 1) ctx.scale(scale, scale);
+    ctx.fillStyle = GRADS[c];
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.fill();
+    ctx.fillStyle = ctx.strokeStyle = 'rgba(18,14,28,0.38)';
+    drawSymbol(COLORS[c].sym);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.beginPath(); ctx.ellipse(-4.5, -6, 4, 2.4, -0.6, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawHole(t) {
+    const [x, y] = at(PLEN);
+    let danger = 0;
+    if (chain.length && state === 'play') danger = Math.max(0, Math.min(1, (chain[0].s - (PLEN - 380)) / 380));
+    if (state === 'drain') danger = 1;
+    if (danger > 0) {
+      const pulse = danger * (0.55 + 0.45 * Math.sin(t * 8));
+      const g = ctx.createRadialGradient(x, y, 8, x, y, 60);
+      g.addColorStop(0, `rgba(224,71,76,${0.6 * pulse})`); g.addColorStop(1, 'rgba(224,71,76,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 60, 0, TAU); ctx.fill();
+    }
+    ctx.fillStyle = '#04060a'; ctx.beginPath(); ctx.arc(x, y, 19, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#e2bd6b'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.strokeStyle = 'rgba(226,189,107,0.3)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(x, y, 12, 0, TAU); ctx.stroke();
+  }
+
+  function drawShooter() {
+    ctx.save();
+    ctx.translate(SX, SY);
+    ctx.rotate(sh.angle);
+    if (state === 'play') {
+      ctx.strokeStyle = 'rgba(226,189,107,0.3)'; ctx.lineWidth = 2; ctx.setLineDash([2, 8]);
+      ctx.beginPath(); ctx.moveTo(48, 0); ctx.lineTo(175, 0); ctx.stroke(); ctx.setLineDash([]);
+    }
+    ctx.rotate(Math.PI / 2);                 // from here on, local "up" (-y) faces the aim direction
+    ctx.strokeStyle = '#8a7240'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const sd of [-1, 1]) for (const k of [-1, 0, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(sd * 14, k * 9 + 6); ctx.lineTo(sd * 25, k * 13 + 6); ctx.lineTo(sd * 28, k * 15 + 13);
+      ctx.stroke();
+    }
+    const g = ctx.createLinearGradient(-20, 0, 20, 0);
+    g.addColorStop(0, '#80642e'); g.addColorStop(0.5, '#ecce82'); g.addColorStop(1, '#80642e');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.ellipse(0, 8, 19, 22, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(40,28,8,0.5)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(0, 29); ctx.stroke();
+    ctx.fillStyle = '#b8974f';
+    ctx.beginPath(); ctx.ellipse(0, -15, 12, 9, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#6d5a35'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-8, -20); ctx.quadraticCurveTo(-14, -32, -6, -40); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(8, -20); ctx.quadraticCurveTo(14, -32, 6, -40); ctx.stroke();
+    drawBall(0, 14, sh.next, 0.5);
+    drawBall(0, -30, sh.cur, sh.swapT > 0 ? 1 - sh.swapT * 3 : 1);
+    ctx.restore();
+  }
+
+  function draw(t) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(bg, 0, 0);
+    ctx.setTransform(S * DPR, 0, 0, S * DPR, 0, 0);
+    drawHole(t);
+    for (let i = chain.length - 1; i >= 0; i--) {
+      const b = chain[i];
+      if (b.rs < -R) continue;
+      const p = at(b.rs);
+      const shrink = Math.max(0.2, Math.min(1, (PLEN - b.rs) / 40));
+      drawBall(p[0], p[1], b.c, shrink);
+    }
+    for (const p of parts) {
+      ctx.globalAlpha = p.life / p.max;
+      ctx.fillStyle = COLORS[p.c].fill;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 1 + 3.5 * (p.life / p.max), 0, TAU); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    for (const s of shots) drawBall(s.x, s.y, s.c, 1);
+    drawShooter();
+    ctx.font = '20px "Lilita One", "Arial Rounded MT Bold", system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    for (const tx of texts) {
+      ctx.globalAlpha = Math.min(1, tx.life * 2);
+      ctx.strokeStyle = '#141a26'; ctx.lineWidth = 5; ctx.strokeText(tx.str, tx.x, tx.y);
+      ctx.fillStyle = '#e2bd6b'; ctx.fillText(tx.str, tx.x, tx.y);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  const hudCache = {};
+  function updateHud() {
+    const vals = { level, score, left: chain.length };
+    for (const k in vals) if (hudCache[k] !== vals[k]) { hudCache[k] = vals[k]; hud[k].textContent = vals[k]; }
+  }
+
+  // ---- Boot ------------------------------------------------------------------
+  // Show a sample chain on the track behind the start screen.
+  genChain();
+  chain.forEach((b, i) => { b.s = b.rs = PLEN * 0.45 - i * D; });
+  sh.cur = 0; sh.next = 2;
+
+  window.addEventListener('resize', resize);
+  resize();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(resize);
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.033, (now - last) / 1000);
+    last = now;
+    update(dt);
+    draw(now / 1000);
+    updateHud();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body></html>
