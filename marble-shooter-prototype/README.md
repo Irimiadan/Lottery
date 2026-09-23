@@ -22,7 +22,12 @@ phone's shape.
   Mirror Curse (aim flipped), Ghost Marbles (shots pass through faded marbles),
   Colour Shuffle (two colours swap; new runs pop), Twin Shot (shots split in two).
   Bad curses show a "Lift · watch ad" button — a placeholder for a rewarded ad.
-- Three tracks (Coil, Serpent, Mirror Coil), synthesised sound effects, vibration
+- **Level select:** 10 demo levels, all unlocked, each with a track preview and the
+  stars you've earned.
+- Five tracks with curves and stone tunnels (marbles inside a tunnel are hidden and
+  can't be hit): Coil, Serpent (rippling rows + arch), Crossing (runs under its own
+  ring), Keyhole (rounded-square spiral), Mirror Coil
+- Synthesised sound effects, vibration
   on Android, screen shake, a heartbeat warning near the hole, saved level progress.
 
 ## How it works (in `index.html`)
@@ -36,7 +41,10 @@ phone's shape.
 - **Retraction/combos:** a front segment slides back when the colours on both
   sides of its gap match; hitting the back segment re-checks for a match and
   raises the combo multiplier.
+- **Tunnels:** track points carry an `inTunnel` flag. Roofs, bridges and tunnel mouths are
+  drawn on a foreground layer above the marbles; marbles on a bridge are redrawn on top.
 - **Levels:** longer, faster chains, a 5th colour from level 3, and the track rotates (`levelCfg`, `TRACKS`).
+  Chain speed is scaled by track length so short tracks stay fair.
 
 ## Next steps
 - Tune difficulty (speed, colours, chain length) with playtesters.

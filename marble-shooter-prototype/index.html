@@ -111,6 +111,7 @@
     padding: 24px;
     background: var(--veil);
     backdrop-filter: blur(3px);
+    overflow-y: auto;
   }
   .card { text-align: center; max-width: 300px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
   .eyebrow { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--sand-dim); }
@@ -140,6 +141,24 @@
     cursor: pointer;
   }
   .card .primary:hover { filter: brightness(1.08); }
+  .actions { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .levels { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; width: 100%; }
+  .lv {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 6px 2px 5px;
+    border-radius: 12px;
+    background: rgba(226, 189, 107, 0.07);
+    border: 1px solid rgba(226, 189, 107, 0.22);
+    color: var(--ink);
+    font: 400 16px var(--display);
+    cursor: pointer;
+  }
+  .lv canvas { width: 100%; max-width: 44px; height: auto; display: block; }
+  .lv .lv-s { font-size: 10px; letter-spacing: 0.08em; color: var(--sand); line-height: 1; }
+  .lv .lv-s .off { color: rgba(226, 189, 107, 0.25); }
+  .lv[aria-current="true"] { border-color: var(--sand); background: rgba(226, 189, 107, 0.16); }
+  .lv:hover { background: rgba(226, 189, 107, 0.14); }
+  .lv:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
   .card .secondary {
     font: 700 14px "Nunito", system-ui, sans-serif;
     color: var(--muted);
@@ -190,8 +209,8 @@
             <li><b>Tap the scarab</b> to swap your marble.</li>
             <li><b>The temple fights back:</b> curses and blessings strike mid-level. Watch for the warning.</li>
           </ul>
-          <button class="primary" id="ovBtn" type="button">Play level 1</button>
-          <button class="secondary" id="ovBtn2" type="button" hidden>Start over from level 1</button>
+          <div class="levels" id="ovLevels" hidden></div>
+          <div class="actions" id="ovActions"></div>
         </div>
       </div>
     </div>
@@ -220,50 +239,90 @@
 
   // ---- Tracks (built for the current logical height H) -------------------------
   let H = 760;
-  function coil(mirror) {
+  // Raw points are [x, y, inTunnel]. Marbles inside a tunnel are hidden and cannot be hit.
+  function coil(mirror, tunnels) {
     const cx = 200, cy = Math.round(H / 2 + 20);
     const rx0 = 180, rx1 = 64, ry0 = Math.min(320, cy - 110, H - cy - 40), ry1 = 84, turns = 2.6;
     const raw = [];
-    for (let y = H + 40; y > cy; y -= 4) raw.push([cx - rx0, y]);
+    for (let y = H + 40; y > cy; y -= 4) raw.push([cx - rx0, y, tunnels && y > H - 110]);
     const N = 3600;
     for (let i = 0; i <= N; i++) {
       const t = i / N, a = Math.PI + t * turns * TAU;
-      raw.push([cx + (rx0 + (rx1 - rx0) * t) * Math.cos(a), cy + (ry0 + (ry1 - ry0) * t) * Math.sin(a)]);
+      // Tunnel over part of the outer ring (first lap only).
+      const tun = tunnels && t < 1 / turns && a > 1.22 * Math.PI && a < 1.62 * Math.PI;
+      raw.push([cx + (rx0 + (rx1 - rx0) * t) * Math.cos(a), cy + (ry0 + (ry1 - ry0) * t) * Math.sin(a), tun]);
     }
     if (mirror) for (const p of raw) p[0] = W - p[0];
     return { raw, sx: cx, sy: cy };
   }
+  // Rows that ripple gently; a stone arch covers the middle of the second row.
   function serpent() {
-    const raw = [], xL = 52, xR = 348, gap = 72, r = gap / 2, y0 = 124;
+    const raw = [], xL = 52, xR = 348, gap = 72, r = gap / 2, y0 = 124, A = 11;
     const n = Math.max(4, Math.floor((H - y0 - 260) / gap) + 1);
+    const wave = (x) => { const u = (x - xL) / (xR - xL); return A * Math.sin(4 * Math.PI * u) * Math.sin(Math.PI * u); };
+    const rowPt = (x, y, row) => [x, y + (x >= xL && x <= xR ? wave(x) : 0), row === 1 && x > 136 && x < 264];
     let y = y0;
-    for (let x = -40; x < xR; x += 4) raw.push([x, y]);
+    for (let x = -40; x < xR; x += 2) raw.push(rowPt(x, y, 0));
     for (let row = 0; row < n - 1; row++) {
       const right = row % 2 === 0;                    // direction of the row we are leaving
       const tx = right ? xR : xL, ty = y + r;
       for (let k = 0; k <= 60; k++) {
         const a = -Math.PI / 2 + (right ? 1 : -1) * (k / 60) * Math.PI;
-        raw.push([tx + r * Math.cos(a), ty + r * Math.sin(a)]);
+        raw.push([tx + r * Math.cos(a), ty + r * Math.sin(a), false]);
       }
       y += gap;
       // After a turn on the right the next row runs leftwards, and vice versa.
       const end = row === n - 2 ? 200 : (right ? xL : xR);
-      if (right) for (let x = xR; x > end; x -= 4) raw.push([x, y]);
-      else for (let x = xL; x < end; x += 4) raw.push([x, y]);
+      if (right) for (let x = xR; x > end; x -= 2) raw.push(rowPt(x, y, row + 1));
+      else for (let x = xL; x < end; x += 2) raw.push(rowPt(x, y, row + 1));
     }
     return { raw, sx: 200, sy: H - 120 };
   }
+  // The chain drops in from the top through a tunnel that runs under its own outer ring, then spirals outwards.
+  function crossing() {
+    const cx = 200, cy = Math.round(Math.min(H - 209, Math.max(278, H * 0.52)));
+    const r0 = 104, r1 = 184, turns = 1.6, rCross = r0 + (r1 - r0) / turns;
+    const raw = [];
+    for (let y = -40; y < cy - r0; y += 2) {
+      const tun = y < 100 || (y > cy - rCross - 44 && y < cy - r0 - 12);
+      raw.push([cx, y, tun]);
+    }
+    const N = 3000;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, a = -Math.PI / 2 + t * turns * TAU, r = r0 + (r1 - r0) * t;
+      raw.push([cx + r * Math.cos(a), cy + r * Math.sin(a), false]);
+    }
+    return { raw, sx: cx, sy: cy };
+  }
+  // A rounded-square spiral (superellipse) entering from a tunnel at the bottom.
+  function keyhole() {
+    const cx = 200, cy = Math.round(H / 2 + 20);
+    const rx0 = 176, rx1 = 62, ry0 = Math.min(300, cy - 120, H - cy - 50), ry1 = 90, turns = 2.2;
+    const se = (v) => Math.sign(v) * Math.sqrt(Math.abs(v));
+    const raw = [];
+    for (let y = H + 40; y > cy; y -= 4) raw.push([cx - rx0, y, y > H - 120]);
+    const N = 12000;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, a = Math.PI + t * turns * TAU;
+      const tun = t < 1 / turns && a > 1.36 * Math.PI && a < 1.64 * Math.PI;
+      raw.push([cx + (rx0 + (rx1 - rx0) * t) * se(Math.cos(a)), cy + (ry0 + (ry1 - ry0) * t) * se(Math.sin(a)), tun]);
+    }
+    return { raw, sx: cx, sy: cy };
+  }
   const TRACKS = [
-    { name: 'Coil', build: () => coil(false) },
+    { name: 'Coil', build: () => coil(false, false) },
     { name: 'Serpent', build: serpent },
-    { name: 'Mirror Coil', build: () => coil(true) },
+    { name: 'Crossing', build: crossing },
+    { name: 'Keyhole', build: keyhole },
+    { name: 'Mirror Coil', build: () => coil(true, true) },
   ];
+  const DEMO_LEVELS = 10;
 
   const levelCfg = (l) => ({
     track: TRACKS[(l - 1) % TRACKS.length],
-    count: 44 + l * 8,
+    count: 40 + l * 6,
     colors: l <= 2 ? 4 : 5,
-    speed: 26 + l * 3,
+    speed: 24 + l * 3,
     rush: 0.28,
     powerRate: 0.06,
   });
@@ -273,7 +332,7 @@
   const cv = $('cv'), ctx = cv.getContext('2d');
   const stage = $('stage'), board = $('board');
   const overlay = $('overlay');
-  const ov = { eyebrow: $('ovEyebrow'), title: $('ovTitle'), stars: $('ovStars'), text: $('ovText'), legend: $('ovLegend'), btn: $('ovBtn'), btn2: $('ovBtn2') };
+  const ov = { eyebrow: $('ovEyebrow'), title: $('ovTitle'), stars: $('ovStars'), text: $('ovText'), legend: $('ovLegend'), levels: $('ovLevels'), actions: $('ovActions') };
   const hud = { level: $('hudLevel'), track: $('hudTrack'), score: $('hudScore'), meter: $('meterFill'), chips: $('chips') };
   const btnSound = $('btnSound'), btnPause = $('btnPause');
   const cursePill = $('cursePill'), curseText = $('curseText'), btnLift = $('btnLift');
@@ -343,25 +402,41 @@
   paintSoundBtn();
 
   // ---- Path lookup: one point per pixel of track length -----------------------
-  let PX = [], PY = [], PLEN = 0;
+  // PT[s] = 1 inside a tunnel; PB[s] = 1 where the track runs over a tunnel roof (a bridge).
+  let PX = [], PY = [], PT = [], PB = null, PLEN = 0, TUNNELS = [];
   function setTrack(track) {
     const { raw, sx, sy } = track.build();
-    PX = [raw[0][0]]; PY = [raw[0][1]];
+    PX = [raw[0][0]]; PY = [raw[0][1]]; PT = [raw[0][2] ? 1 : 0];
     let acc = 0, next = 0;
     for (let i = 1; i < raw.length; i++) {
-      const [x0, y0] = raw[i - 1], [x1, y1] = raw[i];
+      const [x0, y0, t0] = raw[i - 1], [x1, y1, t1] = raw[i];
       const seg = Math.hypot(x1 - x0, y1 - y0);
       while (next + 1 <= acc + seg) {
         next += 1;
         const f = (next - acc) / seg;
         PX.push(x0 + (x1 - x0) * f);
         PY.push(y0 + (y1 - y0) * f);
+        PT.push(t0 && t1 ? 1 : 0);
       }
       acc += seg;
     }
     PLEN = PX.length - 1;
+    TUNNELS = [];
+    for (let i = 0; i <= PLEN; i++) {
+      if (PT[i] && (i === 0 || !PT[i - 1])) TUNNELS.push([i, i]);
+      if (PT[i]) TUNNELS[TUNNELS.length - 1][1] = i;
+    }
+    PB = new Uint8Array(PLEN + 1);
+    const lim = (D / 2 + 12 + R) ** 2;
+    for (const [a, b] of TUNNELS) for (let j = a; j <= b; j += 3) {
+      for (let i = 0; i <= PLEN; i += 1) {
+        if (PT[i] || PB[i]) continue;
+        if ((PX[i] - PX[j]) ** 2 + (PY[i] - PY[j]) ** 2 < lim) PB[i] = 1;
+      }
+    }
     sh.x = sx; sh.y = sy;
   }
+  const inTunnel = (s) => s > 0 && s < PLEN && PT[Math.round(s)] === 1;
   function at(s) {
     if (s <= 0) return [PX[0], PY[0]];
     if (s >= PLEN) return [PX[PLEN], PY[PLEN]];
@@ -372,7 +447,7 @@
   // ---- State -----------------------------------------------------------------
   // chain[0] is the marble closest to the hole; s = distance along the track, rs = drawn (smoothed) distance.
   let state = 'ready';             // ready | play | paused | drain | win | lose
-  let level = Math.max(1, parseInt(store.get('scarab-level', '1'), 10) || 1);
+  let level = Math.min(DEMO_LEVELS, Math.max(1, parseInt(store.get('scarab-level', '1'), 10) || 1));
   let score = 0, levelStartScore = 0, streak = 0, rushing = true;
   let cfg = levelCfg(level);
   let chain = [], shots = [], parts = [], rings = [], texts = [];
@@ -383,6 +458,8 @@
   let tutorialT = 0;
   const sh = { x: 200, y: 380, angle: -Math.PI / 2, cur: 0, next: 1, cool: 0, swapT: 0 };
   let best = Number(store.get('scarab-best', '0')) || 0;
+  let starsByLevel = {};
+  try { starsByLevel = JSON.parse(store.get('scarab-stars', '{}')) || {}; } catch (e) { starsByLevel = {}; }
   let wakeLock = null;
 
   const rnd = (n) => Math.floor(Math.random() * n);
@@ -421,6 +498,8 @@
     cfg = levelCfg(level);
     H = targetH();
     setTrack(cfg.track);
+    // Shorter tracks give less time, so their chains crawl a little slower.
+    cfg.speed *= Math.max(0.7, Math.min(1.1, PLEN / 2600));
     resize();
     genChain();
   }
@@ -534,7 +613,7 @@
     buzz(c.bad ? [20, 30, 20] : 15);
     if (id === 'ghost') {
       let n = 0;
-      for (const b of chain) if (b.s > 0 && Math.random() < 0.35) { b.ghost = true; n++; }
+      for (const b of chain) if (b.s > 0 && !inTunnel(b.s) && Math.random() < 0.35) { b.ghost = true; n++; }
       if (!n && chain.length) chain[0].ghost = true;
     } else if (id === 'shuffle') doShuffle();
     reaim();
@@ -591,8 +670,9 @@
     if (state !== 'play' || !curse || !CURSES[curse.id].bad) return;
     state = 'ad';
     adT = 3;
-    showOverlay({ eyebrow: 'Ad placeholder', title: 'Your ad here', text: 'In the real app a rewarded video plays here. Closing in 3…', btn: 'Close ad' });
-    ov.btn.disabled = true;
+    showOverlay({ eyebrow: 'Ad placeholder', title: 'Your ad here', text: 'In the real app a rewarded video plays here. Closing in 3…', actions: [{ label: 'Close ad', primary: true, fn: finishAd }] });
+    const closeBtn = $('ovBtn');
+    closeBtn.disabled = true;
     clearInterval(adTimer);
     adTimer = setInterval(() => {
       adT--;
@@ -600,8 +680,8 @@
       else {
         clearInterval(adTimer);
         ov.text.textContent = 'Reward: the curse is lifted.';
-        ov.btn.disabled = false;
-        ov.btn.focus({ preventScroll: true });
+        closeBtn.disabled = false;
+        closeBtn.focus({ preventScroll: true });
       }
     }, 1000);
   }
@@ -679,7 +759,7 @@
         if (state !== 'play') continue;
         for (let i = 0; i < chain.length; i++) {
           const b = chain[i];
-          if (b.s < R || b.ghost) continue;
+          if (b.s < R || b.ghost || inTunnel(b.s)) continue;
           const p = at(b.s);
           const dx = p[0] - s.x, dy = p[1] - s.y;
           if (dx * dx + dy * dy < (D * 0.92) ** 2) { insertShot(s, i); s.dead = true; break; }
@@ -730,23 +810,137 @@
   }
 
   // ---- Screens ---------------------------------------------------------------
+  const starRow = (n) => [1, 2, 3].map((i) => `<span class="${i <= n ? '' : 'off'}">★</span>`).join('');
   function showOverlay(o) {
-    ov.btn.disabled = false;
     ov.eyebrow.textContent = o.eyebrow;
     ov.title.textContent = o.title;
-    ov.text.textContent = o.text;
+    ov.text.hidden = !o.text;
+    ov.text.textContent = o.text || '';
     ov.legend.hidden = !o.legend;
     ov.stars.hidden = !o.stars;
-    if (o.stars) ov.stars.innerHTML = [1, 2, 3].map((i) => `<span class="${i <= o.stars ? '' : 'off'}">★</span>`).join('');
+    if (o.stars) ov.stars.innerHTML = starRow(o.stars);
     ov.stars.setAttribute('aria-label', o.stars ? `${o.stars} of 3 stars` : '');
-    ov.btn.textContent = o.btn;
-    ov.btn2.hidden = !o.btn2;
-    if (o.btn2) ov.btn2.textContent = o.btn2;
+    ov.levels.hidden = !o.levels;
+    if (o.levels) buildLevelGrid();
+    ov.actions.innerHTML = '';
+    for (const a of o.actions || []) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = a.primary ? 'primary' : 'secondary';
+      if (a.primary) b.id = 'ovBtn';
+      b.textContent = a.label;
+      b.addEventListener('click', a.fn);
+      ov.actions.appendChild(b);
+    }
     overlay.hidden = false;
-    ov.btn.focus({ preventScroll: true });
+    overlay.scrollTop = 0;
+    const first = o.levels ? ov.levels.querySelector('[aria-current="true"]') : ov.actions.querySelector('button');
+    if (first) first.focus({ preventScroll: true });
   }
+
+  // Level select: a thumbnail of every track, with the stars earned so far.
+  const thumbCache = {};
+  function trackThumb(track) {
+    const key = track.name + '@' + H;
+    if (thumbCache[key]) return thumbCache[key];
+    const tw = 44, th = Math.round(44 * H / W), k = tw / W, dpr = 2;
+    const c = document.createElement('canvas');
+    c.width = tw * dpr; c.height = th * dpr;
+    const g = c.getContext('2d');
+    g.scale(k * dpr, k * dpr);
+    const { raw, sx, sy } = track.build();
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    const stroke = (tun, col, w) => {
+      g.strokeStyle = col; g.lineWidth = w; g.beginPath();
+      let on = false;
+      for (const [x, y, t] of raw) {
+        if (!!t === tun) { on ? g.lineTo(x, y) : g.moveTo(x, y); on = true; } else on = false;
+      }
+      g.stroke();
+    };
+    stroke(false, '#e2bd6b', 18);
+    stroke(true, '#6e5b39', 34);
+    g.fillStyle = '#efe7d6';
+    g.beginPath(); g.arc(sx, sy, 26, 0, TAU); g.fill();
+    const url = c.toDataURL();
+    thumbCache[key] = { url, tw, th };
+    return thumbCache[key];
+  }
+  function buildLevelGrid() {
+    ov.levels.innerHTML = '';
+    for (let l = 1; l <= DEMO_LEVELS; l++) {
+      const tr = levelCfg(l).track, th = trackThumb(tr), st = starsByLevel[l] || 0;
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'lv';
+      if (l === level) b.setAttribute('aria-current', 'true');
+      b.setAttribute('aria-label', `Level ${l}, ${tr.name}, ${st} of 3 stars`);
+      b.innerHTML = `<img alt="" width="${th.tw}" height="${th.th}" src="${th.url}"><span>${l}</span><span class="lv-s">${starRow(st)}</span>`;
+      b.querySelector('img').style.cssText = 'width:100%;max-width:44px;height:auto;display:block';
+      b.addEventListener('click', () => { level = l; score = 0; startLevel(); });
+      ov.levels.appendChild(b);
+    }
+  }
+  function showLevels(back) {
+    showOverlay({
+      eyebrow: 'Demo · every level unlocked',
+      title: 'Choose a level',
+      levels: true,
+      actions: [{ label: 'Back', fn: back }],
+    });
+  }
+
   function saveBest() { if (score > best) { best = score; store.set('scarab-best', best); } }
   function releaseWake() { try { if (wakeLock) wakeLock.release(); } catch (e) {} wakeLock = null; }
+
+  function showStart() {
+    showOverlay({
+      eyebrow: 'Marble shooter',
+      title: 'Scarab Coil',
+      text: 'Marbles roll toward the hole. Tap where you want to shoot and match 3 or more of a colour to pop them.',
+      legend: true,
+      actions: [
+        { label: `Play level ${level}`, primary: true, fn: () => { score = 0; startLevel(); } },
+        { label: 'Choose level', fn: () => showLevels(showStart) },
+      ],
+    });
+  }
+  function showWin(stars, bonus) {
+    showOverlay({
+      eyebrow: `Level ${level} cleared · ${Math.round(levelTime)}s`,
+      title: stars === 3 ? 'Flawless coil!' : stars === 2 ? 'Chain broken!' : 'Close call!',
+      stars,
+      text: `Safety bonus +${bonus}. Score ${score} · Best ${best}. Keep the chain far from the hole for 3 stars.`,
+      actions: [
+        { label: `Play level ${level + 1}`, primary: true, fn: () => { level++; startLevel(); } },
+        { label: 'Replay this level', fn: () => { score = levelStartScore; startLevel(); } },
+        { label: 'Choose level', fn: () => showLevels(() => showWin(stars, bonus)) },
+      ],
+    });
+  }
+  function showLose() {
+    showOverlay({
+      eyebrow: `Level ${level} · ${levelCfg(level).track.name}`,
+      title: 'The chain reached the hole',
+      text: `Score ${score} · Best ${best}. Tip: aim for gaps where the colours on both sides match to trigger combos.`,
+      actions: [
+        { label: 'Try again', primary: true, fn: () => { score = levelStartScore; startLevel(); } },
+        { label: 'Choose level', fn: () => showLevels(showLose) },
+      ],
+    });
+  }
+  function showPause() {
+    showOverlay({
+      eyebrow: `Level ${level} · ${cfg.track.name}`,
+      title: 'Paused',
+      text: `Score ${score}. ${chain.length} marbles left.`,
+      actions: [
+        { label: 'Resume', primary: true, fn: resume },
+        { label: 'Restart level', fn: () => { score = levelStartScore; startLevel(); } },
+        { label: 'Choose level', fn: () => showLevels(showPause) },
+      ],
+    });
+  }
 
   function endWin() {
     state = 'win';
@@ -756,34 +950,25 @@
     const bonus = Math.round((1 - frac) * 100) * 10;
     score += bonus;
     saveBest();
+    starsByLevel[level] = Math.max(starsByLevel[level] || 0, stars);
+    store.set('scarab-stars', JSON.stringify(starsByLevel));
     store.set('scarab-level', level + 1);
     Sound.win(); buzz([20, 40, 20, 40, 60]);
     releaseWake();
-    showOverlay({
-      eyebrow: `Level ${level} cleared · ${Math.round(levelTime)}s`,
-      title: stars === 3 ? 'Flawless coil!' : stars === 2 ? 'Chain broken!' : 'Close call!',
-      stars,
-      text: `Safety bonus +${bonus}. Score ${score} · Best ${best}. Keep the chain far from the hole for 3 stars.`,
-      btn: `Play level ${level + 1}`,
-    });
+    showWin(stars, bonus);
   }
   function endLose() {
     state = 'lose';
     curse = null; omen = null;
     saveBest();
     releaseWake();
-    showOverlay({
-      eyebrow: `Level ${level} · ${levelCfg(level).track.name}`,
-      title: 'The chain reached the hole',
-      text: `Score ${score} · Best ${best}. Tip: aim for gaps where the colours on both sides match to trigger combos.`,
-      btn: 'Try again',
-    });
+    showLose();
   }
   function pause() {
     if (state !== 'play') return;
     state = 'paused';
     releaseWake();
-    showOverlay({ eyebrow: `Level ${level} · ${cfg.track.name}`, title: 'Paused', text: `Score ${score}. ${chain.length} marbles left.`, btn: 'Resume', btn2: 'Restart level' });
+    showPause();
   }
   function resume() {
     Sound.ensure();
@@ -792,18 +977,6 @@
     requestWake();
   }
 
-  ov.btn.addEventListener('click', () => {
-    if (state === 'ad') return finishAd();
-    if (state === 'paused') return resume();
-    if (state === 'win') level++;
-    else if (state === 'lose') score = levelStartScore;
-    startLevel();
-  });
-  ov.btn2.addEventListener('click', () => {
-    if (state === 'paused') { score = levelStartScore; startLevel(); return; }
-    level = 1; score = 0; store.set('scarab-level', 1);
-    startLevel();
-  });
   btnPause.addEventListener('click', () => { if (state === 'paused') resume(); else pause(); });
   btnSound.addEventListener('click', () => { Sound.toggle(); paintSoundBtn(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
@@ -919,6 +1092,56 @@
     trace(); g.strokeStyle = 'rgba(226,189,107,0.24)'; g.lineWidth = D + 12; g.stroke();
     trace(); g.strokeStyle = '#0b0f17'; g.lineWidth = D + 6; g.stroke();
     trace(); g.strokeStyle = 'rgba(226,189,107,0.07)'; g.lineWidth = 2; g.stroke();
+    buildFg();
+  }
+
+  // Foreground layer drawn over the marbles: stone tunnel roofs, the track bridging over them, and tunnel mouths.
+  let fg = null;
+  function buildFg() {
+    fg = null;
+    if (!TUNNELS.length) return;
+    fg = document.createElement('canvas');
+    fg.width = cv.width; fg.height = cv.height;
+    const g = fg.getContext('2d');
+    g.setTransform(S * DPR, 0, 0, S * DPR, 0, 0);
+    g.lineJoin = 'round';
+    const span = (a, b) => { g.beginPath(); g.moveTo(PX[a], PY[a]); for (let i = a + 2; i < b; i += 2) g.lineTo(PX[i], PY[i]); g.lineTo(PX[b], PY[b]); };
+    for (const [a, b] of TUNNELS) {
+      g.lineCap = 'butt';
+      span(a, b); g.strokeStyle = '#231d13'; g.lineWidth = D + 24; g.stroke();
+      span(a, b); g.strokeStyle = '#6e5b39'; g.lineWidth = D + 16; g.stroke();
+      span(a, b); g.strokeStyle = '#86704a'; g.lineWidth = D + 4; g.stroke();
+      // mortar lines across the roof
+      g.strokeStyle = 'rgba(35,29,19,0.55)'; g.lineWidth = 1.5;
+      for (let i = a + 10; i < b - 6; i += 13) {
+        const dx = PX[Math.min(b, i + 1)] - PX[Math.max(a, i - 1)], dy = PY[Math.min(b, i + 1)] - PY[Math.max(a, i - 1)];
+        const l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l, w = (D + 14) / 2;
+        g.beginPath(); g.moveTo(PX[i] + nx * w, PY[i] + ny * w); g.lineTo(PX[i] - nx * w, PY[i] - ny * w); g.stroke();
+      }
+    }
+    // Where the track crosses over a roof, draw it on top (a bridge).
+    g.globalCompositeOperation = 'source-atop';
+    g.lineCap = 'round';
+    for (let i = 0; i <= PLEN; i++) {
+      if (!PB[i] || (i > 0 && PB[i - 1])) continue;
+      let j = i; while (j < PLEN && PB[j + 1]) j++;
+      const a = Math.max(0, i - 6), b = Math.min(PLEN, j + 6);
+      span(a, b); g.strokeStyle = 'rgba(226,189,107,0.55)'; g.lineWidth = D + 12; g.stroke();
+      span(a, b); g.strokeStyle = '#0b0f17'; g.lineWidth = D + 6; g.stroke();
+      i = j;
+    }
+    g.globalCompositeOperation = 'source-over';
+    // Dark mouths where marbles enter and leave, unless the tunnel starts or ends off-screen.
+    for (const [a, b] of TUNNELS) for (const [e, dir] of [[a, 1], [b, -1]]) {
+      const x = PX[e], y = PY[e];
+      if (x < -R || x > W + R || y < -R || y > H + R) continue;
+      const k2 = Math.min(PLEN, Math.max(0, e + dir * 4));
+      const ang = Math.atan2(PY[k2] - y, PX[k2] - x);
+      g.fillStyle = '#05070b';
+      g.beginPath(); g.arc(x, y, R + 3, ang - Math.PI / 2, ang + Math.PI / 2); g.closePath(); g.fill();
+      g.strokeStyle = '#a58c5d'; g.lineWidth = 3;
+      g.beginPath(); g.arc(x, y, R + 5, ang - Math.PI / 2, ang + Math.PI / 2); g.stroke();
+    }
   }
 
   // ---- Rendering ---------------------------------------------------------------
@@ -987,7 +1210,7 @@
   function aimTarget(angle) {
     const cos = Math.cos(angle), sin = Math.sin(angle);
     const pos = [];
-    for (const b of chain) if (b.s >= R && !b.ghost) pos.push(at(b.s));
+    for (const b of chain) if (b.s >= R && !b.ghost && !inTunnel(b.s)) pos.push(at(b.s));
     let x = sh.x + cos * 30, y = sh.y + sin * 30;
     const lim = (D * 0.92) ** 2;
     for (let d = 0; d < 1100; d += 5) {
@@ -1104,9 +1327,7 @@
     ctx.setTransform(k, 0, 0, k, ox * k, oy * k);
     drawHole(t);
     if (state === 'play') drawAim();
-    for (let i = chain.length - 1; i >= 0; i--) {
-      const b = chain[i];
-      if (b.rs < -R) continue;
+    const drawMarble = (b) => {
       const p = at(b.rs);
       const shrink = Math.max(0.2, Math.min(1, (PLEN - b.rs) / 40));
       if (b.ghost) {
@@ -1117,6 +1338,18 @@
         ctx.beginPath(); ctx.arc(p[0], p[1], R, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
         ctx.globalAlpha = 1;
       } else drawBall(p[0], p[1], b.c, shrink, b.p, t);
+    };
+    for (let i = chain.length - 1; i >= 0; i--) {
+      const b = chain[i];
+      if (b.rs < -R || (inTunnel(b.rs - R) && inTunnel(b.rs + R))) continue;
+      drawMarble(b);
+    }
+    if (fg) {
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(fg, 0, 0); ctx.restore();
+      for (let i = chain.length - 1; i >= 0; i--) {
+        const b = chain[i];
+        if (b.rs > 0 && b.rs < PLEN && PB[Math.round(b.rs)]) drawMarble(b);
+      }
     }
     for (const r of rings) {
       ctx.globalAlpha = r.life / r.max;
@@ -1179,14 +1412,7 @@
   setTrack(cfg.track);
   samplePose();
   resize();
-  showOverlay({
-    eyebrow: 'Marble shooter',
-    title: 'Scarab Coil',
-    text: 'Marbles roll toward the hole. Tap where you want to shoot and match 3 or more of a colour to pop them.',
-    legend: true,
-    btn: `Play level ${level}`,
-    btn2: level > 1 ? 'Start over from level 1' : null,
-  });
+  showStart();
   window.addEventListener('resize', resize);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(buildBg);
 
