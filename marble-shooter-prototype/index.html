@@ -278,16 +278,19 @@
     return { raw, sx: 200, sy: H - 120 };
   }
   // The chain drops in from the top, passes under its own ring, then spirals outwards.
-  function crossing() {
-    const cx = 200, cy = Math.round(Math.min(H - 209, Math.max(278, H * 0.52)));
+  // flip: the same idea upside down and mirrored — it rises from the bottom.
+  function crossing(flip) {
+    const cx = 200;
+    const cy = flip ? Math.round(Math.min(H - 188, Math.max(303, H * 0.5))) : Math.round(Math.min(H - 209, Math.max(278, H * 0.52)));
     const r0 = 104, r1 = 184, turns = 1.6;
     const raw = [];
-    for (let y = -40; y < cy - r0; y += 2) raw.push([cx, y]);
+    for (let y = flip ? 2 * cy - (H + 40) : -40; y < cy - r0; y += 2) raw.push([cx, y]);
     const N = 3000;
     for (let i = 0; i <= N; i++) {
       const t = i / N, a = -Math.PI / 2 + t * turns * TAU, r = r0 + (r1 - r0) * t;
       raw.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
     }
+    if (flip) for (const p of raw) { p[0] = W - p[0]; p[1] = 2 * cy - p[1]; }
     return { raw, sx: cx, sy: cy };
   }
   // A pen that walks forwards and turns along arcs (angles in degrees; positive turns clockwise on screen).
@@ -297,6 +300,7 @@
     return {
       raw,
       get x() { return x; },
+      get y() { return y; },
       fwd(len) { const n = Math.max(1, Math.ceil(len / 2)); for (let i = 0; i < n; i++) { x += Math.cos(h) * len / n; y += Math.sin(h) * len / n; raw.push([x, y]); } },
       arc(r, deg) {
         const n = Math.max(2, Math.ceil(Math.abs(deg) * r * Math.PI / 180 / 1.5)), dh = deg * Math.PI / 180 / n, step = r * Math.abs(dh);
@@ -304,8 +308,8 @@
       },
     };
   }
-  // Wide rows joined by big turns; every row but the last ties a loop that crosses back over itself.
-  function curls() {
+  // Wide rows joined by big turns; every row but the last ties loops that cross back over themselves.
+  function curls(perRow) {
     const xL = 90, xR = 310, gap = 150, rU = gap / 2, y0 = 128;
     const n = Math.max(2, Math.floor((H - y0 - 250) / gap) + 1);
     const P = pen(-40, y0, 0);
@@ -315,8 +319,8 @@
     for (let row = 0; row < n; row++) {
       const east = row % 2 === 0, last = row === n - 1, sign = east ? 1 : -1;
       if (last) { P.fwd(Math.abs(200 - P.x)); break; }
-      P.fwd(Math.abs(200 - LOOP_HALF * sign - P.x));
-      loop(sign);                                   // loops hang below the row
+      const centres = perRow === 2 ? (east ? [142, 258] : [258, 142]) : [200];
+      for (const c of centres) { P.fwd(Math.abs(c - LOOP_HALF * sign - P.x)); loop(sign); }   // loops hang below the row
       P.fwd(Math.abs((east ? xR : xL) - P.x));
       P.arc(rU, 180 * sign);                        // turn down into the next row
     }
@@ -336,17 +340,82 @@
     for (let i = 0; i <= N; i++) raw.push(pt(i / N));
     return { raw, sx: cx, sy: cy };
   }
+  // Slanted rows that zigzag down the screen.
+  function zigzag() {
+    const slope = 8 * Math.PI / 180, r = 32, xL = 60, xR = 340, y0 = 116;
+    const n = Math.max(2, Math.floor((H - 250 - y0 - 20) / 102) + 1);
+    const P = pen(-40, y0, 8);
+    for (let row = 0; row < n; row++) {
+      const east = row % 2 === 0, last = row === n - 1;
+      const target = last ? 200 : east ? xR : xL;
+      P.fwd(Math.abs(target - P.x) / Math.cos(slope));
+      if (last) break;
+      P.arc(r, east ? 164 : -164);
+    }
+    return { raw: P.raw, sx: 200, sy: H - 110 };
+  }
+  // Rippling columns that wind up and down across the screen.
+  function pillars() {
+    const cols = [44, 122, 200, 278, 356], top = 150, bot = H - 250, r = 39, A = 8;
+    const wob = (y) => { const u = (y - top) / (bot - top); return u < 0 || u > 1 ? 0 : A * Math.sin(3 * Math.PI * u) * Math.sin(Math.PI * u); };
+    const raw = [];
+    for (let c = 0; c < cols.length; c++) {
+      const down = c % 2 === 0, x = cols[c];
+      if (down) for (let y = c === 0 ? -40 : top; y <= bot; y += 2) raw.push([x + wob(y), y]);
+      else for (let y = bot; y >= top; y -= 2) raw.push([x + wob(y), y]);
+      if (c === cols.length - 1) break;
+      const cxT = x + r;
+      for (let k = 1; k < 60; k++) {
+        const a = down ? Math.PI - (k / 60) * Math.PI : Math.PI + (k / 60) * Math.PI;
+        raw.push([cxT + r * Math.cos(a), (down ? bot : top) + r * Math.sin(a)]);
+      }
+    }
+    return { raw, sx: 200, sy: H - 110 };
+  }
+  // A ring around the scarab with three loops curling inwards, each crossing itself.
+  // Each loop turns a little extra (dth) so it replaces a chord of the ring exactly and the ring stays round.
+  function clover() {
+    const Rr = 170, cx = 200, cyc = Math.round(Math.max(330, H * 0.5 + 24));
+    const loopWith = (Q, bend) => { Q.arc(36, bend); Q.fwd(48); Q.arc(28, 260); Q.fwd(48); Q.arc(36, bend); };
+    let dth = 0;
+    for (let k = 0; k < 6; k++) {                      // solve: loop span == ring chord for the angle it replaces
+      const Q = pen(0, 0, -dth / 2);
+      loopWith(Q, 50 + dth / 2);
+      dth = 2 * Math.asin(Math.min(1, Math.hypot(Q.x, Q.y) / (2 * Rr))) * 180 / Math.PI;
+    }
+    const P = pen(-40, cyc + 30, 0);
+    P.fwd(cx - Rr - 30 + 40);
+    P.arc(30, -90);                                   // now at the ring's left side, heading up
+    const ringArc = (deg) => P.arc(Rr, deg);
+    const loop = () => loopWith(P, 50 + dth / 2);
+    ringArc(50 - dth / 2); loop(); ringArc(100 - dth); loop(); ringArc(100 - dth); loop(); ringArc(50 - dth / 2);
+    return { raw: P.raw, sx: cx, sy: cyc };
+  }
+  // Colour worlds; each pair of levels gets its own.
+  const THEMES = [
+    { name: 'Sand',  ground: '#141a26', accent: '226,189,107' },
+    { name: 'Jade',  ground: '#0f1d1a', accent: '120,210,170' },
+    { name: 'Dusk',  ground: '#1a1528', accent: '190,160,240' },
+    { name: 'Ember', ground: '#211311', accent: '240,150,100' },
+    { name: 'Tide',  ground: '#0e1a28', accent: '120,190,235' },
+  ];
   const TRACKS = [
     { name: 'Coil', build: () => coil(false) },
     { name: 'Serpent', build: serpent },
-    { name: 'Crossing', build: crossing },
-    { name: 'Curls', build: curls },
+    { name: 'Crossing', build: () => crossing(false) },
+    { name: 'Zigzag', build: zigzag },
+    { name: 'Curls', build: () => curls(1) },
+    { name: 'Pillars', build: pillars },
     { name: 'Keyhole', build: keyhole },
+    { name: 'Undertow', build: () => crossing(true) },
+    { name: 'Clover', build: clover },
+    { name: 'Double Curls', build: () => curls(2) },
   ];
   const DEMO_LEVELS = 10;
 
   const levelCfg = (l) => ({
     track: TRACKS[(l - 1) % TRACKS.length],
+    theme: THEMES[Math.floor((l - 1) / 2) % THEMES.length],
     count: 40 + l * 6,
     colors: l <= 2 ? 4 : 5,
     speed: 24 + l * 3,
@@ -458,7 +527,7 @@
     return { X, Y, T, n, sx, sy };
   }
   // PB[s] = 1 where the track runs over a tunnel roof (a bridge).
-  let PX = [], PY = [], PT = [], PB = null, PLEN = 0, TUNNELS = [];
+  let PX = [], PY = [], PT = [], PB = null, FADE = null, PLEN = 0, TUNNELS = [];
   function setTrack(track) {
     const r = buildPath(track);
     PX = r.X; PY = r.Y; PT = r.T; PLEN = r.n;
@@ -466,6 +535,12 @@
     for (let i = 0; i <= PLEN; i++) {
       if (PT[i] && (i === 0 || !PT[i - 1])) TUNNELS.push([i, i]);
       if (PT[i]) TUNNELS[TUNNELS.length - 1][1] = i;
+    }
+    // FADE[s]: marbles sink smoothly into tunnels (1 = fully visible, 0 = hidden) instead of being cut off.
+    FADE = new Float32Array(PLEN + 1).fill(1);
+    for (const [a, b] of TUNNELS) for (let i = Math.max(0, a - R); i <= Math.min(PLEN, b + R); i++) {
+      const u = i < a ? a - i : i > b ? i - b : -Math.min(i - a, b - i);
+      FADE[i] = Math.min(FADE[i], Math.max(0, Math.min(1, (u + R) / (2 * R))));
     }
     PB = new Uint8Array(PLEN + 1);
     const lim = (D / 2 + 12 + R) ** 2;
@@ -881,7 +956,7 @@
 
   // Level select: a thumbnail of every track, with the stars earned so far.
   const thumbCache = {};
-  function trackThumb(track) {
+  function trackThumb(track, theme) {
     const key = track.name + '@' + H;
     if (thumbCache[key]) return thumbCache[key];
     const tw = 44, th = Math.round(44 * H / W), k = tw / W, dpr = 2;
@@ -890,6 +965,7 @@
     const g = c.getContext('2d');
     g.scale(k * dpr, k * dpr);
     const { X, Y, T, n, sx, sy } = buildPath(track);
+    g.fillStyle = theme.ground; g.fillRect(0, 0, W, H);
     g.lineCap = 'round'; g.lineJoin = 'round';
     const stroke = (tun, col, w) => {
       g.strokeStyle = col; g.lineWidth = w; g.beginPath();
@@ -900,7 +976,7 @@
       g.stroke();
     };
     stroke(true, '#6e5b39', 40);
-    stroke(false, '#e2bd6b', 18);
+    stroke(false, `rgb(${theme.accent})`, 18);
     g.fillStyle = '#efe7d6';
     g.beginPath(); g.arc(sx, sy, 26, 0, TAU); g.fill();
     const url = c.toDataURL();
@@ -910,12 +986,12 @@
   function buildLevelGrid() {
     ov.levels.innerHTML = '';
     for (let l = 1; l <= DEMO_LEVELS; l++) {
-      const tr = levelCfg(l).track, th = trackThumb(tr), st = starsByLevel[l] || 0;
+      const lc = levelCfg(l), tr = lc.track, th = trackThumb(tr, lc.theme), st = starsByLevel[l] || 0;
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'lv';
       if (l === level) b.setAttribute('aria-current', 'true');
-      b.setAttribute('aria-label', `Level ${l}, ${tr.name}, ${st} of 3 stars`);
+      b.setAttribute('aria-label', `Level ${l}, ${tr.name}, ${lc.theme.name} world, ${st} of 3 stars`);
       b.innerHTML = `<img alt="" width="${th.tw}" height="${th.th}" src="${th.url}"><span>${l}</span><span class="lv-s">${starRow(st)}</span>`;
       b.querySelector('img').style.cssText = 'width:100%;max-width:44px;height:auto;display:block';
       b.addEventListener('click', () => { level = l; score = 0; startLevel(); });
@@ -1114,14 +1190,15 @@
     bg.width = cv.width; bg.height = cv.height;
     const g = bg.getContext('2d');
     g.setTransform(S * DPR, 0, 0, S * DPR, 0, 0);
-    g.fillStyle = '#141a26'; g.fillRect(0, 0, W, H);
+    const th = cfg.theme;
+    g.fillStyle = th.ground; g.fillRect(0, 0, W, H);
     const rg = g.createRadialGradient(sh.x, sh.y, 10, sh.x, sh.y, 340);
-    rg.addColorStop(0, 'rgba(226,189,107,0.12)'); rg.addColorStop(1, 'rgba(226,189,107,0)');
+    rg.addColorStop(0, `rgba(${th.accent},0.13)`); rg.addColorStop(1, `rgba(${th.accent},0)`);
     g.fillStyle = rg; g.fillRect(0, 0, W, H);
     let seed = 7;
     const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     for (let i = 0; i < 560; i++) {
-      g.fillStyle = `rgba(226,189,107,${0.03 + r() * 0.09})`;
+      g.fillStyle = `rgba(${th.accent},${0.03 + r() * 0.09})`;
       g.fillRect(r() * W, r() * H, 1.2, 1.2);
     }
     g.lineCap = 'round'; g.lineJoin = 'round';
@@ -1130,9 +1207,9 @@
       for (let i = 3; i <= PLEN; i += 3) g.lineTo(PX[i], PY[i]);
       g.lineTo(PX[PLEN], PY[PLEN]);
     };
-    trace(); g.strokeStyle = 'rgba(226,189,107,0.24)'; g.lineWidth = D + 12; g.stroke();
-    trace(); g.strokeStyle = '#0b0f17'; g.lineWidth = D + 6; g.stroke();
-    trace(); g.strokeStyle = 'rgba(226,189,107,0.07)'; g.lineWidth = 2; g.stroke();
+    trace(); g.strokeStyle = `rgba(${th.accent},0.26)`; g.lineWidth = D + 12; g.stroke();
+    trace(); g.strokeStyle = '#080b11'; g.lineWidth = D + 6; g.stroke();
+    trace(); g.strokeStyle = `rgba(${th.accent},0.07)`; g.lineWidth = 2; g.stroke();
     buildFg();
   }
 
@@ -1167,8 +1244,8 @@
       if (!PB[i] || (i > 0 && PB[i - 1])) continue;
       let j = i; while (j < PLEN && PB[j + 1]) j++;
       const a = Math.max(0, i - 6), b = Math.min(PLEN, j + 6);
-      span(a, b); g.strokeStyle = 'rgba(226,189,107,0.55)'; g.lineWidth = D + 12; g.stroke();
-      span(a, b); g.strokeStyle = '#0b0f17'; g.lineWidth = D + 6; g.stroke();
+      span(a, b); g.strokeStyle = `rgba(${cfg.theme.accent},0.55)`; g.lineWidth = D + 12; g.stroke();
+      span(a, b); g.strokeStyle = '#080b11'; g.lineWidth = D + 6; g.stroke();
       i = j;
     }
     g.globalCompositeOperation = 'source-over';
@@ -1368,29 +1445,26 @@
     ctx.setTransform(k, 0, 0, k, ox * k, oy * k);
     drawHole(t);
     if (state === 'play') drawAim();
-    const drawMarble = (b) => {
+    // Tunnel roofs sit under the marbles; marbles fade and shrink as they sink in, so none is ever cut in half.
+    if (fg) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(fg, 0, 0); ctx.restore(); }
+    const drawMarble = (b, fade) => {
       const p = at(b.rs);
-      const shrink = Math.max(0.2, Math.min(1, (PLEN - b.rs) / 40));
+      const shrink = Math.max(0.2, Math.min(1, (PLEN - b.rs) / 40)) * (0.7 + 0.3 * fade);
       if (b.ghost) {
-        ctx.globalAlpha = 0.3;
+        ctx.globalAlpha = 0.3 * fade;
         drawBall(p[0], p[1], b.c, shrink, b.p, t);
-        ctx.globalAlpha = 0.7;
+        ctx.globalAlpha = 0.7 * fade;
         ctx.strokeStyle = 'rgb(150,200,255)'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 4]);
         ctx.beginPath(); ctx.arc(p[0], p[1], R, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
         ctx.globalAlpha = 1;
-      } else drawBall(p[0], p[1], b.c, shrink, b.p, t);
+      } else { ctx.globalAlpha = fade; drawBall(p[0], p[1], b.c, shrink, b.p, t); }
+      ctx.globalAlpha = 1;
     };
     for (let i = chain.length - 1; i >= 0; i--) {
       const b = chain[i];
-      if (b.rs < -R || (inTunnel(b.rs - R) && inTunnel(b.rs + R))) continue;
-      drawMarble(b);
-    }
-    if (fg) {
-      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(fg, 0, 0); ctx.restore();
-      for (let i = chain.length - 1; i >= 0; i--) {
-        const b = chain[i];
-        if (b.rs > 0 && b.rs < PLEN && PB[Math.round(b.rs)]) drawMarble(b);
-      }
+      if (b.rs < -R) continue;
+      const fade = b.rs > 0 && b.rs < PLEN ? FADE[Math.round(b.rs)] : 1;
+      if (fade > 0.02) drawMarble(b, fade);
     }
     for (const r of rings) {
       ctx.globalAlpha = r.life / r.max;
@@ -1421,7 +1495,7 @@
   function setHud(key, val, fn) { if (hudCache[key] !== val) { hudCache[key] = val; fn(val); } }
   function updateHud() {
     setHud('level', `Level ${level}`, (v) => { hud.level.textContent = v; });
-    setHud('track', cfg.track.name, (v) => { hud.track.textContent = v; });
+    setHud('track', `${cfg.track.name} · ${cfg.theme.name}`, (v) => { hud.track.textContent = v; });
     setHud('score', score, (v) => { hud.score.textContent = v; });
     const done = state === 'ready' ? 0 : 1 - chain.length / Math.max(1, cfg.count);
     setHud('meter', Math.round(Math.max(0, done) * 100), (v) => { hud.meter.style.width = v + '%'; });

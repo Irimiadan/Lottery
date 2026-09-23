@@ -24,10 +24,11 @@ phone's shape.
   Bad curses show a "Lift · watch ad" button — a placeholder for a rewarded ad.
 - **Level select:** 10 demo levels, all unlocked, each with a track preview and the
   stars you've earned.
-- Five tracks. Where a track passes back over itself, the lower strand runs through a
-  stone tunnel under a bridge (marbles in a tunnel are hidden and can't be hit):
-  Coil, Serpent (rippling rows), Crossing (drops in under its own ring),
-  Curls (each row ties a loop that crosses itself), Keyhole (enters under two rings).
+- Ten unique tracks in five colour worlds (Sand, Jade, Dusk, Ember, Tide):
+  Coil, Serpent, Crossing, Zigzag, Curls, Pillars, Keyhole, Undertow, Clover, Double Curls.
+  Where a track passes back over itself, the lower strand runs through a stone tunnel
+  under a bridge. Marbles fade and shrink as they sink into a tunnel (never cut in half),
+  and can't be hit while inside.
 - Synthesised sound effects, vibration
   on Android, screen shake, a heartbeat warning near the hole, saved level progress.
 
