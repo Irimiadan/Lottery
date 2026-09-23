@@ -1,57 +1,46 @@
-# Scarab Coil — marble shooter prototype
+# Molecoil — molecular marble shooter prototype (working title)
 
-A marble-shooter prototype (match 3 or more marbles in a rolling chain) in a single HTML file (no build step, no libraries).
+A rogue polymer is crawling toward the nuclear pore. Fire atoms into the chain and match
+3 or more of one element to break it apart. One HTML file, no build step, no libraries.
 
 ## Play it
-Open `index.html` in any browser, including Chrome on Android.
+Open `index.html` in any browser, including Chrome on Android. Built phone-first: the
+board fills a portrait screen and adapts to the phone's shape.
 
-Built phone-first: the board fills a portrait screen and its height adapts to the
-phone's shape.
-
-- Touch and hold to aim (a guide line shows which marble you will hit), release to shoot.
-- Tap the scarab (or right-click / press Space) to swap the current and next marble.
+- Touch and hold to aim (the guide line shows which atom you will hit), release to fire.
+- Tap the nucleus (or right-click / press Space) to swap the loaded and next atom.
 - Pause button (or P / Esc); the game also pauses when you leave the app.
-- Groups of 3+ of the same colour pop. If the marbles on both sides of the gap
-  match, the front of the chain slides back and can set off a combo.
-- Clear the chain before it reaches the hole.
-- Glowing marbles hold powers: slow-down, reverse, bomb.
-- Consecutive hits build a streak bonus; misses reset it.
-- 1–3 stars per level depending on how close the chain got to the hole.
-- **The temple fights back:** curses and blessings strike mid-level, each announced by
-  a warning first and shown with a timer:
-  Mirror Curse (aim flipped), Ghost Marbles (shots pass through faded marbles),
-  Colour Shuffle (two colours swap; new runs pop), Twin Shot (shots split in two).
-  Bad curses show a "Lift · watch ad" button — a placeholder for a rewarded ad.
-- **Level select:** 10 demo levels, all unlocked, each with a track preview and the
-  stars you've earned.
-- Ten unique tracks in five colour worlds (Sand, Jade, Dusk, Ember, Tide):
-  Coil, Serpent, Crossing, Zigzag, Curls, Pillars, Keyhole, Undertow, Clover, Double Curls.
-  Where a track passes back over itself, the lower strand runs through a stone tunnel
-  under a bridge. Marbles fade and shrink as they sink into a tunnel (never cut in half),
-  and can't be hit while inside.
-- Synthesised sound effects, vibration
-  on Android, screen shake, a heartbeat warning near the hole, saved level progress.
+- **Atoms** are elements — O, S, Cl, N, K — coloured after the chemists' CPK convention
+  where possible, with the symbol printed on each one.
+- **Chain reactions:** when the atoms on both sides of a gap match, the front of the chain
+  slides back and can pop again, raising the combo multiplier.
+- **Power atoms** (glowing): Freeze, Reverse reaction, Fission.
+- **Streaks:** consecutive hits add a bonus; a miss resets it.
+- **Mutations** strike mid-level, each announced first and shown with a timer:
+  Chirality Flip (aim mirrored), Quantum Tunnelling (shots pass through faded atoms),
+  Transmutation (two elements swap; new runs pop), Mitosis (shots divide in two).
+  Harmful ones show a "Repair · watch ad" button — a placeholder for a rewarded ad.
+- **Level select:** 10 demo levels, all unlocked, with track previews and saved stars
+  (1–3 per level, by how close the chain got to the pore).
+- **Ten tracks in five worlds** (Cytoplasm, Chlorophyll, Neuron, Blood, Plankton):
+  Helix, Villi, Synapse, Beta Sheet, Hairpins, Cilia, Membrane, Osmosis, Trefoil,
+  Supercoil. Where a track passes back over itself, the lower strand runs through a
+  membrane channel; atoms fade into it (never cut in half) and can't be hit inside.
+- Synthesised sound, vibration on Android, a heartbeat warning near the pore.
 
 ## How it works (in `index.html`)
-- **Track:** an entry channel plus a spiral, resampled into a lookup table with one
-  point per pixel of length, so `at(s)` turns "distance along the track" into x/y.
-- **Chain:** an array of marbles, each storing only its colour and distance `s`.
-  Only the last marble is pushed; any marble it touches is pushed along with it,
-  so gaps stay open until the back of the chain catches up.
-- **Insertion:** a shot marble that hits the chain is inserted in front of or behind
-  the marble it hit, then neighbours are pushed apart and matches are checked.
-- **Retraction/combos:** a front segment slides back when the colours on both
-  sides of its gap match; hitting the back segment re-checks for a match and
-  raises the combo multiplier.
-- **Tunnels:** `buildPath` finds crossings automatically — any point closer than a
-  groove width to a part of the track at least 100px earlier becomes a tunnel. Roofs,
-  bridges and tunnel mouths are drawn on a foreground layer above the marbles; marbles
-  on a bridge are redrawn on top. New tracks can be sketched with the `pen` helper
-  (`fwd`, `arc`).
-- **Levels:** longer, faster chains, a 5th colour from level 3, and the track rotates (`levelCfg`, `TRACKS`).
-  Chain speed is scaled by track length so short tracks stay fair.
+- **Track:** each track is a list of points (built with formulas or the `pen` helper:
+  `fwd`, `arc`), resampled into one point per pixel of length so `at(s)` turns
+  "distance along the track" into x/y.
+- **Crossings:** `buildPath` finds them automatically — any point closer than a groove
+  width to a part of the track at least 100px earlier becomes a tunnel. Channels,
+  bridges and mouths are drawn on a layer under the atoms; atoms fade near tunnels.
+- **Chain:** only the last atom is pushed; atoms it touches are pushed along, so gaps
+  stay open until the back catches up. Each gap remembers the combo level that opened it.
+- **Levels:** `levelCfg` (chain length, speed, colours, track, world). Chain speed is
+  scaled by track length so short tracks stay fair.
 
 ## Next steps
-- Tune difficulty (speed, colours, chain length) with playtesters.
-- Add more track shapes and power-ups, real sound assets, a level map.
-- Package for Google Play: wrap it with Capacitor, or port the logic to Godot.
+- Playtest and tune difficulty; add sound assets and a level map.
+- Package for Google Play (Capacitor, or port to Godot) and hook the ad button to AdMob.
+- Before launch: trademark search on the final name.

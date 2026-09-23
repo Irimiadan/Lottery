@@ -1,15 +1,15 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
-<title>Scarab Coil</title>
+<title>Molecoil</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@400;700;800&display=swap">
 <style>
   :root {
     color-scheme: dark;
-    --night: #141a26;
+    --night: #0c1620;
     --night-deep: #0b0f17;
-    --sand: #e2bd6b;
-    --sand-dim: #9b8456;
+    --glow: #7ee8c8;
+    --glow-dim: #5b9d8b;
     --ink: #efe7d6;
     --muted: #a3a8b6;
     --veil: rgba(10, 13, 20, 0.7);
@@ -40,7 +40,7 @@
     position: relative;
     border-radius: 20px;
     overflow: hidden;
-    box-shadow: 0 0 0 1px rgba(226, 189, 107, 0.2), 0 18px 48px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 0 1px rgba(126, 232, 200, 0.2), 0 18px 48px rgba(0, 0, 0, 0.5);
   }
   canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
 
@@ -56,7 +56,7 @@
   }
   .hud-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
   .lvl { display: flex; flex-direction: column; line-height: 1.1; }
-  .lvl-num { font-family: var(--display); font-size: 17px; color: var(--sand); }
+  .lvl-num { font-family: var(--display); font-size: 17px; color: var(--glow); }
   .lvl-track { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); }
   .score { font-family: var(--display); font-size: 28px; font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 rgba(0,0,0,0.4); }
   .btns { display: flex; justify-content: flex-end; gap: 8px; }
@@ -64,17 +64,17 @@
     pointer-events: auto;
     width: 38px; height: 38px;
     display: grid; place-items: center;
-    border: 1px solid rgba(226, 189, 107, 0.3);
+    border: 1px solid rgba(126, 232, 200, 0.3);
     border-radius: 12px;
     background: var(--chip);
-    color: var(--sand);
+    color: var(--glow);
     cursor: pointer;
     padding: 0;
   }
   .icon svg { width: 18px; height: 18px; }
   .icon:focus-visible, .card button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
-  .meter { height: 5px; border-radius: 99px; background: rgba(226, 189, 107, 0.14); overflow: hidden; }
-  .meter-fill { height: 100%; width: 0; background: var(--sand); border-radius: inherit; transition: width 0.25s ease-out; }
+  .meter { height: 5px; border-radius: 99px; background: rgba(126, 232, 200, 0.14); overflow: hidden; }
+  .meter-fill { height: 100%; width: 0; background: var(--glow); border-radius: inherit; transition: width 0.25s ease-out; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 22px; }
   .chip {
     font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
@@ -83,7 +83,7 @@
     border: 1px solid rgba(239, 231, 214, 0.18);
     font-variant-numeric: tabular-nums;
   }
-  .chip.hot { color: var(--sand); border-color: rgba(226, 189, 107, 0.5); }
+  .chip.hot { color: var(--glow); border-color: rgba(126, 232, 200, 0.5); }
   .chips-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
   .curse-pill {
     display: flex; align-items: center; gap: 8px;
@@ -97,7 +97,7 @@
   .curse-pill button {
     pointer-events: auto;
     font: 700 12px "Nunito", system-ui, sans-serif;
-    color: var(--night); background: var(--sand);
+    color: var(--night); background: var(--glow);
     border: 0; border-radius: 99px;
     padding: 6px 11px; cursor: pointer;
   }
@@ -114,18 +114,18 @@
     overflow-y: auto;
   }
   .card { text-align: center; max-width: 300px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-  .eyebrow { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--sand-dim); }
+  .eyebrow { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--glow-dim); }
   .card h2 {
     margin: 0;
     font-family: var(--display);
     font-weight: 400;
     font-size: 34px;
     line-height: 1.05;
-    color: var(--sand);
+    color: var(--glow);
     text-wrap: balance;
   }
-  .stars { margin: 0; font-size: 34px; letter-spacing: 0.12em; color: var(--sand); line-height: 1; }
-  .stars .off { color: rgba(226, 189, 107, 0.22); }
+  .stars { margin: 0; font-size: 34px; letter-spacing: 0.12em; color: var(--glow); line-height: 1; }
+  .stars .off { color: rgba(126, 232, 200, 0.22); }
   .card p.body { margin: 0; line-height: 1.5; }
   .legend { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; text-align: left; font-size: 14px; color: var(--muted); }
   .legend b { color: var(--ink); }
@@ -134,7 +134,7 @@
     font: 400 20px var(--display);
     letter-spacing: 0.03em;
     color: var(--night);
-    background: var(--sand);
+    background: var(--glow);
     border: 0;
     border-radius: 999px;
     padding: 14px 32px;
@@ -147,17 +147,17 @@
     display: flex; flex-direction: column; align-items: center; gap: 3px;
     padding: 6px 2px 5px;
     border-radius: 12px;
-    background: rgba(226, 189, 107, 0.07);
-    border: 1px solid rgba(226, 189, 107, 0.22);
+    background: rgba(126, 232, 200, 0.07);
+    border: 1px solid rgba(126, 232, 200, 0.22);
     color: var(--ink);
     font: 400 16px var(--display);
     cursor: pointer;
   }
   .lv canvas { width: 100%; max-width: 44px; height: auto; display: block; }
-  .lv .lv-s { font-size: 10px; letter-spacing: 0.08em; color: var(--sand); line-height: 1; }
-  .lv .lv-s .off { color: rgba(226, 189, 107, 0.25); }
-  .lv[aria-current="true"] { border-color: var(--sand); background: rgba(226, 189, 107, 0.16); }
-  .lv:hover { background: rgba(226, 189, 107, 0.14); }
+  .lv .lv-s { font-size: 10px; letter-spacing: 0.08em; color: var(--glow); line-height: 1; }
+  .lv .lv-s .off { color: rgba(126, 232, 200, 0.25); }
+  .lv[aria-current="true"] { border-color: var(--glow); background: rgba(126, 232, 200, 0.16); }
+  .lv:hover { background: rgba(126, 232, 200, 0.14); }
   .lv:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
   .card .secondary {
     font: 700 14px "Nunito", system-ui, sans-serif;
@@ -174,11 +174,11 @@
 <div class="app">
   <main class="stage" id="stage">
     <div class="board" id="board">
-      <canvas id="cv" aria-label="Game board: a track with a chain of marbles and a scarab shooter"></canvas>
+      <canvas id="cv" aria-label="Game board: a track with a chain of atoms and an atom shooter in the middle"></canvas>
 
       <div class="hud">
         <div class="hud-row">
-          <div class="lvl"><span class="lvl-num" id="hudLevel">Level 1</span><span class="lvl-track" id="hudTrack">Coil</span></div>
+          <div class="lvl"><span class="lvl-num" id="hudLevel">Level 1</span><span class="lvl-track" id="hudTrack">Helix</span></div>
           <div class="score" id="hudScore">0</div>
           <div class="btns">
             <button class="icon" id="btnSound" type="button" aria-label="Mute sound"></button>
@@ -192,22 +192,22 @@
           <div class="chips" id="chips"></div>
           <div class="curse-pill" id="cursePill" hidden>
             <span id="curseText"></span>
-            <button id="btnLift" type="button">Lift · watch ad</button>
+            <button id="btnLift" type="button">Repair · watch ad</button>
           </div>
         </div>
       </div>
 
       <div class="overlay" id="overlay">
         <div class="card">
-          <p class="eyebrow" id="ovEyebrow">Marble shooter</p>
-          <h2 id="ovTitle">Scarab Coil</h2>
+          <p class="eyebrow" id="ovEyebrow">Molecular marble shooter</p>
+          <h2 id="ovTitle">Molecoil</h2>
           <p class="stars" id="ovStars" hidden></p>
-          <p class="body" id="ovText">Marbles roll toward the hole. Tap where you want to shoot and match 3 or more of a colour to pop them.</p>
+          <p class="body" id="ovText">A rogue polymer is crawling toward the nuclear pore. Fire atoms into it and match 3 or more of one element to break it apart.</p>
           <ul class="legend" id="ovLegend">
-            <li><b>Glowing marbles</b> hold powers: slow-down, reverse or bomb.</li>
+            <li><b>Glowing atoms</b> hold powers: freeze, reverse reaction or fission.</li>
             <li><b>Hit in a row</b> to build a streak bonus.</li>
-            <li><b>Tap the scarab</b> to swap your marble.</li>
-            <li><b>The temple fights back:</b> curses and blessings strike mid-level. Watch for the warning.</li>
+            <li><b>Tap the nucleus</b> to swap your atom.</li>
+            <li><b>Mutations strike</b> mid-level. Some help, some hurt. Watch for the warning.</li>
           </ul>
           <div class="levels" id="ovLevels" hidden></div>
           <div class="actions" id="ovActions"></div>
@@ -227,13 +227,14 @@
   const RETRACT_SPEED = 280;
   const REDUCE_MOTION = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Each colour also has a symbol so the game stays playable for colour-blind players.
+  // Each atom is an element (colours follow the chemists' CPK convention where they can);
+  // the element symbol printed on it keeps the game playable for colour-blind players.
   const COLORS = [
-    { fill: '#e0474c', hi: '#ffb3b0', lo: '#7d1a22', sym: 'tri' },
-    { fill: '#eeb02c', hi: '#fff0b8', lo: '#8a5a07', sym: 'diamond' },
-    { fill: '#2fae78', hi: '#b5f5d6', lo: '#0f5a3a', sym: 'dot' },
-    { fill: '#3a7de8', hi: '#bcd6ff', lo: '#163a80', sym: 'ring' },
-    { fill: '#9d5ae0', hi: '#e2c8ff', lo: '#4a2280', sym: 'cross' },
+    { fill: '#e0474c', hi: '#ffb3b0', lo: '#7d1a22', el: 'O' },
+    { fill: '#eeb02c', hi: '#fff0b8', lo: '#8a5a07', el: 'S' },
+    { fill: '#2fae78', hi: '#b5f5d6', lo: '#0f5a3a', el: 'Cl' },
+    { fill: '#3a7de8', hi: '#bcd6ff', lo: '#163a80', el: 'N' },
+    { fill: '#9d5ae0', hi: '#e2c8ff', lo: '#4a2280', el: 'K' },
   ];
   const POWERS = ['slow', 'reverse', 'bomb'];
 
@@ -372,7 +373,7 @@
     }
     return { raw, sx: 200, sy: H - 110 };
   }
-  // A ring around the scarab with three loops curling inwards, each crossing itself.
+  // A ring around the shooter with three loops curling inwards, each crossing itself.
   // Each loop turns a little extra (dth) so it replaces a chord of the ring exactly and the ring stays round.
   function clover() {
     const Rr = 170, cx = 200, cyc = Math.round(Math.max(330, H * 0.5 + 24));
@@ -393,23 +394,23 @@
   }
   // Colour worlds; each pair of levels gets its own.
   const THEMES = [
-    { name: 'Sand',  ground: '#141a26', accent: '226,189,107' },
-    { name: 'Jade',  ground: '#0f1d1a', accent: '120,210,170' },
-    { name: 'Dusk',  ground: '#1a1528', accent: '190,160,240' },
-    { name: 'Ember', ground: '#211311', accent: '240,150,100' },
-    { name: 'Tide',  ground: '#0e1a28', accent: '120,190,235' },
+    { name: 'Cytoplasm',   ground: '#0c1620', accent: '126,232,200' },
+    { name: 'Chlorophyll', ground: '#0c1a10', accent: '160,224,110' },
+    { name: 'Neuron',      ground: '#161328', accent: '190,160,240' },
+    { name: 'Blood',       ground: '#1d0d12', accent: '240,120,120' },
+    { name: 'Plankton',    ground: '#0b1726', accent: '110,190,240' },
   ];
   const TRACKS = [
-    { name: 'Coil', build: () => coil(false) },
-    { name: 'Serpent', build: serpent },
-    { name: 'Crossing', build: () => crossing(false) },
-    { name: 'Zigzag', build: zigzag },
-    { name: 'Curls', build: () => curls(1) },
-    { name: 'Pillars', build: pillars },
-    { name: 'Keyhole', build: keyhole },
-    { name: 'Undertow', build: () => crossing(true) },
-    { name: 'Clover', build: clover },
-    { name: 'Double Curls', build: () => curls(2) },
+    { name: 'Helix', build: () => coil(false) },
+    { name: 'Villi', build: serpent },
+    { name: 'Synapse', build: () => crossing(false) },
+    { name: 'Beta Sheet', build: zigzag },
+    { name: 'Hairpins', build: () => curls(1) },
+    { name: 'Cilia', build: pillars },
+    { name: 'Membrane', build: keyhole },
+    { name: 'Osmosis', build: () => crossing(true) },
+    { name: 'Trefoil', build: clover },
+    { name: 'Supercoil', build: () => curls(2) },
   ];
   const DEMO_LEVELS = 10;
 
@@ -433,13 +434,13 @@
   const btnSound = $('btnSound'), btnPause = $('btnPause');
   const cursePill = $('cursePill'), curseText = $('curseText'), btnLift = $('btnLift');
 
-  // ---- Curses: the temple fights back ----------------------------------------
+  // ---- Mutations: the cell fights back -----------------------------------------
   // Every effect is announced by an omen first, has a visible timer, and leaves the aim line honest.
   const CURSES = {
-    mirror:  { name: 'Mirror Curse',   desc: 'Your aim is flipped left and right', bad: true,  dur: 8,   tint: '157,90,224' },
-    ghost:   { name: 'Ghost Marbles',  desc: 'Shots pass through faded marbles',   bad: true,  dur: 9,   tint: '150,200,255' },
-    shuffle: { name: 'Colour Shuffle', desc: 'Two colours swap places',            bad: false, dur: 1.4, tint: '238,176,44' },
-    twin:    { name: 'Twin Shot',      desc: 'Every shot splits in two',           bad: false, dur: 8,   tint: '47,174,120' },
+    mirror:  { name: 'Chirality Flip',     desc: 'Your aim is mirrored left and right', bad: true,  dur: 8,   tint: '157,90,224' },
+    ghost:   { name: 'Quantum Tunnelling', desc: 'Shots pass through faded atoms',      bad: true,  dur: 9,   tint: '150,200,255' },
+    shuffle: { name: 'Transmutation',      desc: 'Two elements swap places',            bad: false, dur: 1.4, tint: '238,176,44' },
+    twin:    { name: 'Mitosis',            desc: 'Every shot divides in two',           bad: false, dur: 8,   tint: '47,174,120' },
   };
   const OMEN_TIME = 1.8;
 
@@ -450,7 +451,7 @@
 
   // ---- Sound (synthesised, no files) and haptics -----------------------------
   const Sound = (() => {
-    let ac = null, on = store.get('scarab-sound', 'on') !== 'off';
+    let ac = null, on = store.get('molecoil-sound', 'on') !== 'off';
     function ensure() {
       if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } }
       if (ac && ac.state === 'suspended') ac.resume().catch(() => {});
@@ -472,7 +473,7 @@
     return {
       ensure,
       get on() { return on; },
-      toggle() { on = !on; store.set('scarab-sound', on ? 'on' : 'off'); if (on) ensure(); return on; },
+      toggle() { on = !on; store.set('molecoil-sound', on ? 'on' : 'off'); if (on) ensure(); return on; },
       shoot() { tone(560, 0.09, 'triangle', 0.1, 260); },
       thud() { tone(190, 0.06, 'square', 0.04); },
       swap() { tone(700, 0.06, 'sine', 0.07, 980); },
@@ -563,19 +564,19 @@
   // ---- State -----------------------------------------------------------------
   // chain[0] is the marble closest to the hole; s = distance along the track, rs = drawn (smoothed) distance.
   let state = 'ready';             // ready | play | paused | drain | win | lose
-  let level = Math.min(DEMO_LEVELS, Math.max(1, parseInt(store.get('scarab-level', '1'), 10) || 1));
+  let level = Math.min(DEMO_LEVELS, Math.max(1, parseInt(store.get('molecoil-level', '1'), 10) || 1));
   let score = 0, levelStartScore = 0, streak = 0, rushing = true;
   let cfg = levelCfg(level);
   let chain = [], shots = [], parts = [], rings = [], texts = [];
   let slowT = 0, reverseT = 0, shake = 0, beatT = 0, maxHead = 0, levelTime = 0;
   let curse = null, omen = null, nextCurseT = 0, lastCurse = null, adT = 0, adTimer = null;
   let lastAim = null;              // last pointer position, so the aim can be re-applied when mirroring flips
-  let tutorial = 0;                // level 1 hints: 1 = "tap to shoot", 2 = "tap scarab to swap", 0 = none
+  let tutorial = 0;                // level 1 hints: 1 = "tap to shoot", 2 = "tap the nucleus to swap", 0 = none
   let tutorialT = 0;
   const sh = { x: 200, y: 380, angle: -Math.PI / 2, cur: 0, next: 1, cool: 0, swapT: 0 };
-  let best = Number(store.get('scarab-best', '0')) || 0;
+  let best = Number(store.get('molecoil-best', '0')) || 0;
   let starsByLevel = {};
-  try { starsByLevel = JSON.parse(store.get('scarab-stars', '{}')) || {}; } catch (e) { starsByLevel = {}; }
+  try { starsByLevel = JSON.parse(store.get('molecoil-stars', '{}')) || {}; } catch (e) { starsByLevel = {}; }
   let wakeLock = null;
 
   const rnd = (n) => Math.floor(Math.random() * n);
@@ -666,8 +667,8 @@
   function activatePower(p, x, y, level) {
     Sound.power(); buzz(35);
     rings.push({ x, y, r: 10, life: 0.5, max: 0.5 });
-    if (p === 'slow') { slowT = 6; popText(x, y - 26, 'Slow-down!', true); }
-    else if (p === 'reverse') { reverseT = 2.4; popText(x, y - 26, 'Reverse!', true); }
+    if (p === 'slow') { slowT = 6; popText(x, y - 26, 'Freeze!', true); }
+    else if (p === 'reverse') { reverseT = 2.4; popText(x, y - 26, 'Reverse reaction!', true); }
     else if (p === 'bomb') {
       Sound.boom(); buzz([30, 30, 60]);
       shake = Math.max(shake, 10);
@@ -682,7 +683,7 @@
         }
       }
       score += n * 10;
-      popText(x, y - 26, `Boom! +${n * 10}`, true);
+      popText(x, y - 26, `Fission! +${n * 10}`, true);
     }
   }
 
@@ -760,7 +761,7 @@
     for (const m of chain) m.c = sw(m.c);
     sh.cur = sw(sh.cur); sh.next = sw(sh.next);
     Sound.shuffle();
-    popText(W / 2, H * 0.3, 'Shuffled!', true);
+    popText(W / 2, H * 0.3, 'Transmuted!', true);
     // New runs created by the swap pop straight away.
     for (let guard = 0; guard < 12; guard++) {
       const k = findRun();
@@ -795,7 +796,7 @@
       if (adT > 0) ov.text.textContent = `In the real app a rewarded video plays here. Closing in ${adT}…`;
       else {
         clearInterval(adTimer);
-        ov.text.textContent = 'Reward: the curse is lifted.';
+        ov.text.textContent = 'Reward: the mutation is repaired.';
         closeBtn.disabled = false;
         closeBtn.focus({ preventScroll: true });
       }
@@ -806,7 +807,7 @@
     state = 'play';
     overlay.hidden = true;
     endCurse();
-    popText(W / 2, H * 0.3, 'Curse lifted!', true);
+    popText(W / 2, H * 0.3, 'Mutation repaired!', true);
   }
   btnLift.addEventListener('click', liftCurse);
 
@@ -975,9 +976,9 @@
       }
       g.stroke();
     };
-    stroke(true, '#6e5b39', 40);
+    stroke(true, `rgba(${theme.accent},0.3)`, 40);
     stroke(false, `rgb(${theme.accent})`, 18);
-    g.fillStyle = '#efe7d6';
+    g.fillStyle = '#ffc0ae';
     g.beginPath(); g.arc(sx, sy, 26, 0, TAU); g.fill();
     const url = c.toDataURL();
     thumbCache[key] = { url, tw, th };
@@ -1007,14 +1008,14 @@
     });
   }
 
-  function saveBest() { if (score > best) { best = score; store.set('scarab-best', best); } }
+  function saveBest() { if (score > best) { best = score; store.set('molecoil-best', best); } }
   function releaseWake() { try { if (wakeLock) wakeLock.release(); } catch (e) {} wakeLock = null; }
 
   function showStart() {
     showOverlay({
-      eyebrow: 'Marble shooter',
-      title: 'Scarab Coil',
-      text: 'Marbles roll toward the hole. Tap where you want to shoot and match 3 or more of a colour to pop them.',
+      eyebrow: 'Molecular marble shooter',
+      title: 'Molecoil',
+      text: 'A rogue polymer is crawling toward the nuclear pore. Fire atoms into it and match 3 or more of one element to break it apart.',
       legend: true,
       actions: [
         { label: `Play level ${level}`, primary: true, fn: () => { score = 0; startLevel(); } },
@@ -1025,9 +1026,9 @@
   function showWin(stars, bonus) {
     showOverlay({
       eyebrow: `Level ${level} cleared · ${Math.round(levelTime)}s`,
-      title: stars === 3 ? 'Flawless coil!' : stars === 2 ? 'Chain broken!' : 'Close call!',
+      title: stars === 3 ? 'Perfect reaction!' : stars === 2 ? 'Polymer broken!' : 'Close call!',
       stars,
-      text: `Safety bonus +${bonus}. Score ${score} · Best ${best}. Keep the chain far from the hole for 3 stars.`,
+      text: `Safety bonus +${bonus}. Score ${score} · Best ${best}. Keep the chain far from the pore for 3 stars.`,
       actions: [
         { label: `Play level ${level + 1}`, primary: true, fn: () => { level++; startLevel(); } },
         { label: 'Replay this level', fn: () => { score = levelStartScore; startLevel(); } },
@@ -1038,8 +1039,8 @@
   function showLose() {
     showOverlay({
       eyebrow: `Level ${level} · ${levelCfg(level).track.name}`,
-      title: 'The chain reached the hole',
-      text: `Score ${score} · Best ${best}. Tip: aim for gaps where the colours on both sides match to trigger combos.`,
+      title: 'The polymer reached the pore',
+      text: `Score ${score} · Best ${best}. Tip: aim for gaps where the elements on both sides match to set off chain reactions.`,
       actions: [
         { label: 'Try again', primary: true, fn: () => { score = levelStartScore; startLevel(); } },
         { label: 'Choose level', fn: () => showLevels(showLose) },
@@ -1050,7 +1051,7 @@
     showOverlay({
       eyebrow: `Level ${level} · ${cfg.track.name}`,
       title: 'Paused',
-      text: `Score ${score}. ${chain.length} marbles left.`,
+      text: `Score ${score}. ${chain.length} atoms left.`,
       actions: [
         { label: 'Resume', primary: true, fn: resume },
         { label: 'Restart level', fn: () => { score = levelStartScore; startLevel(); } },
@@ -1068,8 +1069,8 @@
     score += bonus;
     saveBest();
     starsByLevel[level] = Math.max(starsByLevel[level] || 0, stars);
-    store.set('scarab-stars', JSON.stringify(starsByLevel));
-    store.set('scarab-level', level + 1);
+    store.set('molecoil-stars', JSON.stringify(starsByLevel));
+    store.set('molecoil-level', level + 1);
     Sound.win(); buzz([20, 40, 20, 40, 60]);
     releaseWake();
     showWin(stars, bonus);
@@ -1195,8 +1196,22 @@
     const rg = g.createRadialGradient(sh.x, sh.y, 10, sh.x, sh.y, 340);
     rg.addColorStop(0, `rgba(${th.accent},0.13)`); rg.addColorStop(1, `rgba(${th.accent},0)`);
     g.fillStyle = rg; g.fillRect(0, 0, W, H);
+    const vg = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.max(W, H) * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.45)');
+    g.fillStyle = vg; g.fillRect(0, 0, W, H);
     let seed = 7;
     const r = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    // Out-of-focus cells drifting in the background, like a microscope slide.
+    for (let i = 0; i < 9; i++) {
+      const cx = r() * W, cy = r() * H, rad = 40 + r() * 70;
+      const cg = g.createRadialGradient(cx, cy, rad * 0.2, cx, cy, rad);
+      cg.addColorStop(0, `rgba(${th.accent},0.045)`); cg.addColorStop(0.85, `rgba(${th.accent},0.03)`); cg.addColorStop(1, `rgba(${th.accent},0)`);
+      g.fillStyle = cg; g.beginPath(); g.arc(cx, cy, rad, 0, TAU); g.fill();
+      g.strokeStyle = `rgba(${th.accent},0.07)`; g.lineWidth = 1.5;
+      g.beginPath(); g.arc(cx, cy, rad * 0.92, 0, TAU); g.stroke();
+      g.fillStyle = `rgba(${th.accent},0.06)`;
+      g.beginPath(); g.arc(cx + (r() - 0.5) * rad * 0.6, cy + (r() - 0.5) * rad * 0.6, rad * 0.22, 0, TAU); g.fill();
+    }
     for (let i = 0; i < 560; i++) {
       g.fillStyle = `rgba(${th.accent},${0.03 + r() * 0.09})`;
       g.fillRect(r() * W, r() * H, 1.2, 1.2);
@@ -1213,7 +1228,7 @@
     buildFg();
   }
 
-  // Foreground layer drawn over the marbles: stone tunnel roofs, the track bridging over them, and tunnel mouths.
+  // Foreground layer under the marbles: membrane channels (tunnels), the track bridging over them, and tunnel mouths.
   let fg = null;
   function buildFg() {
     fg = null;
@@ -1226,15 +1241,22 @@
     const span = (a, b) => { g.beginPath(); g.moveTo(PX[a], PY[a]); for (let i = a + 2; i < b; i += 2) g.lineTo(PX[i], PY[i]); g.lineTo(PX[b], PY[b]); };
     for (const [a, b] of TUNNELS) {
       g.lineCap = 'butt';
-      span(a, b); g.strokeStyle = '#231d13'; g.lineWidth = D + 24; g.stroke();
-      span(a, b); g.strokeStyle = '#6e5b39'; g.lineWidth = D + 16; g.stroke();
-      span(a, b); g.strokeStyle = '#86704a'; g.lineWidth = D + 4; g.stroke();
-      // mortar lines across the roof
-      g.strokeStyle = 'rgba(35,29,19,0.55)'; g.lineWidth = 1.5;
-      for (let i = a + 10; i < b - 6; i += 13) {
+      // A membrane channel: a lipid bilayer band the chain passes under.
+      const acc = cfg.theme.accent;
+      span(a, b); g.strokeStyle = '#050a0d'; g.lineWidth = D + 26; g.stroke();
+      span(a, b); g.strokeStyle = `rgba(${acc},0.16)`; g.lineWidth = D + 24; g.stroke();
+      span(a, b); g.strokeStyle = '#08121a'; g.lineWidth = D - 2; g.stroke();
+      // phospholipids: round heads on both faces, tails pointing into the membrane
+      for (let i = a + 3; i < b - 2; i += 6) {
         const dx = PX[Math.min(b, i + 1)] - PX[Math.max(a, i - 1)], dy = PY[Math.min(b, i + 1)] - PY[Math.max(a, i - 1)];
-        const l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l, w = (D + 14) / 2;
-        g.beginPath(); g.moveTo(PX[i] + nx * w, PY[i] + ny * w); g.lineTo(PX[i] - nx * w, PY[i] - ny * w); g.stroke();
+        const l = Math.hypot(dx, dy) || 1, nx = -dy / l, ny = dx / l, w = (D + 20) / 2;
+        for (const sd of [1, -1]) {
+          const hx = PX[i] + nx * w * sd, hy = PY[i] + ny * w * sd;
+          g.strokeStyle = `rgba(${acc},0.35)`; g.lineWidth = 1.2;
+          g.beginPath(); g.moveTo(hx, hy); g.lineTo(hx - nx * 8 * sd, hy - ny * 8 * sd); g.stroke();
+          g.fillStyle = `rgba(${acc},0.9)`;
+          g.beginPath(); g.arc(hx, hy, 2.8, 0, TAU); g.fill();
+        }
       }
     }
     // Where the track crosses over a roof, draw it on top (a bridge).
@@ -1257,28 +1279,24 @@
       const ang = Math.atan2(PY[k2] - y, PX[k2] - x);
       g.fillStyle = '#05070b';
       g.beginPath(); g.arc(x, y, R + 3, ang - Math.PI / 2, ang + Math.PI / 2); g.closePath(); g.fill();
-      g.strokeStyle = '#a58c5d'; g.lineWidth = 3;
+      g.strokeStyle = `rgba(${cfg.theme.accent},0.8)`; g.lineWidth = 2.5;
       g.beginPath(); g.arc(x, y, R + 5, ang - Math.PI / 2, ang + Math.PI / 2); g.stroke();
     }
   }
 
   // ---- Rendering ---------------------------------------------------------------
-  function drawSymbol(sym) {
-    ctx.beginPath();
-    switch (sym) {
-      case 'tri': ctx.moveTo(0, -5); ctx.lineTo(4.6, 3.6); ctx.lineTo(-4.6, 3.6); ctx.closePath(); ctx.fill(); break;
-      case 'diamond': ctx.moveTo(0, -5.2); ctx.lineTo(5.2, 0); ctx.lineTo(0, 5.2); ctx.lineTo(-5.2, 0); ctx.closePath(); ctx.fill(); break;
-      case 'dot': ctx.arc(0, 0, 3.6, 0, TAU); ctx.fill(); break;
-      case 'ring': ctx.arc(0, 0, 4, 0, TAU); ctx.lineWidth = 2.2; ctx.stroke(); break;
-      case 'cross': ctx.moveTo(-3.8, -3.8); ctx.lineTo(3.8, 3.8); ctx.moveTo(3.8, -3.8); ctx.lineTo(-3.8, 3.8); ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.stroke(); break;
-    }
+  function drawSymbol(el) {
+    ctx.font = `800 ${el.length > 1 ? 10.5 : 12.5}px "Nunito", system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(el, 0, 1);
   }
   function drawPowerIcon(p) {
     ctx.fillStyle = ctx.strokeStyle = '#ffffff';
     ctx.beginPath();
     if (p === 'slow') {
-      ctx.moveTo(-4.5, -5.5); ctx.lineTo(4.5, -5.5); ctx.lineTo(0, 0); ctx.closePath();
-      ctx.moveTo(0, 0); ctx.lineTo(4.5, 5.5); ctx.lineTo(-4.5, 5.5); ctx.closePath(); ctx.fill();
+      ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+      for (let k = 0; k < 3; k++) { const a = k * Math.PI / 3; ctx.moveTo(Math.cos(a) * 6, Math.sin(a) * 6); ctx.lineTo(-Math.cos(a) * 6, -Math.sin(a) * 6); }
+      ctx.stroke();
     } else if (p === 'reverse') {
       ctx.lineWidth = 2.2; ctx.lineCap = 'round';
       ctx.arc(0, 0, 4.6, -0.2 * Math.PI, 1.3 * Math.PI); ctx.stroke();
@@ -1297,13 +1315,13 @@
     if (scale !== 1) ctx.scale(scale, scale);
     if (p) {
       const pulse = 0.5 + 0.5 * Math.sin(t * 6);
-      ctx.fillStyle = `rgba(255,244,214,${0.18 + 0.22 * pulse})`;
+      ctx.fillStyle = `rgba(234,255,248,${0.18 + 0.22 * pulse})`;
       ctx.beginPath(); ctx.arc(0, 0, R + 4 + pulse * 2, 0, TAU); ctx.fill();
     }
     ctx.fillStyle = GRADS[c];
     ctx.beginPath(); ctx.arc(0, 0, R, 0, TAU); ctx.fill();
     if (p) drawPowerIcon(p);
-    else { ctx.fillStyle = ctx.strokeStyle = 'rgba(18,14,28,0.38)'; drawSymbol(COLORS[c].sym); }
+    else { ctx.fillStyle = 'rgba(10,16,24,0.62)'; drawSymbol(COLORS[c].el); }
     ctx.fillStyle = 'rgba(255,255,255,0.55)';
     ctx.beginPath(); ctx.ellipse(-4.5, -6, 4, 2.4, -0.6, 0, TAU); ctx.fill();
     ctx.restore();
@@ -1318,10 +1336,15 @@
       g.addColorStop(0, `rgba(224,71,76,${0.65 * pulse})`); g.addColorStop(1, 'rgba(224,71,76,0)');
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 70, 0, TAU); ctx.fill();
     }
-    ctx.fillStyle = '#04060a'; ctx.beginPath(); ctx.arc(x, y, 19, 0, TAU); ctx.fill();
-    ctx.strokeStyle = '#e2bd6b'; ctx.lineWidth = 3; ctx.stroke();
-    ctx.strokeStyle = 'rgba(226,189,107,0.3)'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(x, y, 12, 0, TAU); ctx.stroke();
+    // A nuclear pore: a dark channel ringed by eight protein subunits.
+    ctx.fillStyle = '#03070a'; ctx.beginPath(); ctx.arc(x, y, 17, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(126,232,200,0.35)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(x, y, 11, 0, TAU); ctx.stroke();
+    for (let k = 0; k < 8; k++) {
+      const a = k * TAU / 8 + t * 0.2;
+      ctx.fillStyle = '#7ee8c8';
+      ctx.beginPath(); ctx.arc(x + Math.cos(a) * 20, y + Math.sin(a) * 20, 4.2, 0, TAU); ctx.fill();
+    }
   }
 
   // March along the aim line to find the first marble a shot would hit.
@@ -1382,10 +1405,10 @@
       ctx.fill(); ctx.stroke();
       ctx.font = '13px "Nunito", system-ui, sans-serif';
       ctx.fillStyle = `rgb(${c.tint})`;
-      ctx.fillText(c.bad ? 'THE TEMPLE STIRS…' : 'A BLESSING ARRIVES…', W / 2, y - 26);
+      ctx.fillText(c.bad ? 'A MUTATION IS COMING…' : 'A REACTION STARTS…', W / 2, y - 26);
       ctx.font = `${30 + pulse * 3}px "Lilita One", "Arial Rounded MT Bold", system-ui, sans-serif`;
       ctx.strokeStyle = '#141a26'; ctx.lineWidth = 7; ctx.strokeText(c.name, W / 2, y);
-      ctx.fillStyle = '#fff4d6'; ctx.fillText(c.name, W / 2, y);
+      ctx.fillStyle = '#eafff8'; ctx.fillText(c.name, W / 2, y);
       ctx.font = '15px "Nunito", system-ui, sans-serif';
       ctx.lineWidth = 5; ctx.strokeText(c.desc, W / 2, y + 28);
       ctx.fillStyle = '#efe7d6'; ctx.fillText(c.desc, W / 2, y + 28);
@@ -1396,35 +1419,40 @@
     }
   }
 
-  function drawShooter() {
+  // The shooter is an atom: a nucleus of protons and neutrons with electrons on tilted orbits.
+  const NUCLEONS = [[0, 0, 1], [6.5, 2, 0], [-6, 3, 1], [2, -6.5, 0], [-4.5, -5, 1], [5, 6, 1], [-2, 7, 0]];
+  function drawShooter(t) {
     ctx.save();
     ctx.translate(sh.x, sh.y);
-    ctx.rotate(sh.angle + Math.PI / 2);         // local "up" (-y) faces the aim direction
-    ctx.strokeStyle = '#8a7240'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    for (const sd of [-1, 1]) for (const k of [-1, 0, 1]) {
-      ctx.beginPath();
-      ctx.moveTo(sd * 14, k * 9 + 6); ctx.lineTo(sd * 25, k * 13 + 6); ctx.lineTo(sd * 28, k * 15 + 13);
-      ctx.stroke();
+    const spin = REDUCE_MOTION ? 0 : t;
+    for (let k = 0; k < 3; k++) {
+      ctx.save();
+      ctx.rotate(k * Math.PI / 3 + spin * 0.25);
+      ctx.strokeStyle = 'rgba(126,232,200,0.45)'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.ellipse(0, 0, 38, 13, 0, 0, TAU); ctx.stroke();
+      const e = spin * (1.6 + k * 0.3) + k * 2.1;
+      ctx.fillStyle = '#eafff8';
+      ctx.beginPath(); ctx.arc(Math.cos(e) * 38, Math.sin(e) * 13, 2.6, 0, TAU); ctx.fill();
+      ctx.restore();
     }
-    const g = ctx.createLinearGradient(-20, 0, 20, 0);
-    g.addColorStop(0, '#80642e'); g.addColorStop(0.5, '#ecce82'); g.addColorStop(1, '#80642e');
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.ellipse(0, 8, 19, 22, 0, 0, TAU); ctx.fill();
-    ctx.strokeStyle = 'rgba(40,28,8,0.5)'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(0, 29); ctx.stroke();
-    ctx.fillStyle = '#b8974f';
-    ctx.beginPath(); ctx.ellipse(0, -15, 12, 9, 0, 0, TAU); ctx.fill();
-    ctx.strokeStyle = '#6d5a35'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(-8, -20); ctx.quadraticCurveTo(-14, -32, -6, -40); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(8, -20); ctx.quadraticCurveTo(14, -32, 6, -40); ctx.stroke();
-    drawBall(0, 14, sh.next, 0.55, null, 0);
+    ctx.rotate(sh.angle + Math.PI / 2);         // local "up" (-y) faces the aim direction
+    drawBall(0, 24, sh.next, 0.5, null, 0);     // the next atom waits behind the nucleus
+    for (const [x, y, proton] of NUCLEONS) {
+      const g = ctx.createRadialGradient(x - 1.5, y - 1.5, 0.5, x, y, 5.5);
+      g.addColorStop(0, proton ? '#ffc0ae' : '#e4ecf0');
+      g.addColorStop(1, proton ? '#c2412f' : '#6d7c86');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, y, 5.5, 0, TAU); ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(234,255,248,0.55)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(0, -17); ctx.stroke();   // bond to the loaded atom
     drawBall(0, -30, sh.cur, sh.swapT > 0 ? 1 - sh.swapT * 3 : 1, null, 0);
     ctx.restore();
   }
 
   function drawTutorial(t) {
     if (!tutorial || state !== 'play') return;
-    const msg = tutorial === 1 ? 'Tap where you want to shoot' : 'Tap the scarab to swap marbles';
+    const msg = tutorial === 1 ? 'Tap where you want to shoot' : 'Tap the nucleus to swap atoms';
     const y = tutorial === 1 ? H - 70 : sh.y + 62;
     ctx.save();
     ctx.globalAlpha = 0.65 + 0.35 * Math.sin(t * 4);
@@ -1468,7 +1496,7 @@
     }
     for (const r of rings) {
       ctx.globalAlpha = r.life / r.max;
-      ctx.strokeStyle = '#fff4d6'; ctx.lineWidth = r.big ? 5 : 3;
+      ctx.strokeStyle = '#eafff8'; ctx.lineWidth = r.big ? 5 : 3;
       ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, TAU); ctx.stroke();
     }
     for (const p of parts) {
@@ -1478,13 +1506,13 @@
     }
     ctx.globalAlpha = 1;
     for (const s of shots) drawBall(s.x, s.y, s.c, 1, null, t);
-    drawShooter();
+    drawShooter(t);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
     for (const tx of texts) {
       ctx.globalAlpha = Math.min(1, tx.life * 2);
       ctx.font = `${tx.big ? 26 : 20}px "Lilita One", "Arial Rounded MT Bold", system-ui, sans-serif`;
       ctx.strokeStyle = '#141a26'; ctx.lineWidth = 5; ctx.strokeText(tx.str, tx.x, tx.y);
-      ctx.fillStyle = tx.big ? '#fff4d6' : '#e2bd6b'; ctx.fillText(tx.str, tx.x, tx.y);
+      ctx.fillStyle = tx.big ? '#eafff8' : '#7ee8c8'; ctx.fillText(tx.str, tx.x, tx.y);
     }
     ctx.globalAlpha = 1;
     drawCurse(t);
@@ -1500,7 +1528,7 @@
     const done = state === 'ready' ? 0 : 1 - chain.length / Math.max(1, cfg.count);
     setHud('meter', Math.round(Math.max(0, done) * 100), (v) => { hud.meter.style.width = v + '%'; });
     const chips = [];
-    if (slowT > 0) chips.push(`<span class="chip hot">Slow ${Math.ceil(slowT)}s</span>`);
+    if (slowT > 0) chips.push(`<span class="chip hot">Freeze ${Math.ceil(slowT)}s</span>`);
     if (reverseT > 0) chips.push('<span class="chip hot">Reverse</span>');
     if (streak >= 2) chips.push(`<span class="chip${streak >= 3 ? ' hot' : ''}">Streak ${streak}</span>`);
     setHud('chips', chips.join(''), (v) => { hud.chips.innerHTML = v; });
