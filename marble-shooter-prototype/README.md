@@ -1,6 +1,6 @@
 # Scarab Coil — marble shooter prototype
 
-A Zuma-style marble shooter prototype in a single HTML file (no build step, no libraries).
+A marble-shooter prototype (match 3 or more marbles in a rolling chain) in a single HTML file (no build step, no libraries).
 
 ## Play it
 Open `index.html` in any browser, including Chrome on Android.
