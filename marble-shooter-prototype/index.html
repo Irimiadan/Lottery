@@ -221,9 +221,10 @@
         raw.push([tx + r * Math.cos(a), ty + r * Math.sin(a)]);
       }
       y += gap;
-      const end = row === n - 2 ? 200 : (right ? xR : xL);
-      if (right) for (let x = xL; x < end; x += 4) raw.push([x, y]);
-      else for (let x = xR; x > end; x -= 4) raw.push([x, y]);
+      // After a turn on the right the next row runs leftwards, and vice versa.
+      const end = row === n - 2 ? 200 : (right ? xL : xR);
+      if (right) for (let x = xR; x > end; x -= 4) raw.push([x, y]);
+      else for (let x = xL; x < end; x += 4) raw.push([x, y]);
     }
     return { raw, sx: 200, sy: H - 120 };
   }
@@ -333,7 +334,7 @@
   // chain[0] is the marble closest to the hole; s = distance along the track, rs = drawn (smoothed) distance.
   let state = 'ready';             // ready | play | paused | drain | win | lose
   let level = Math.max(1, parseInt(store.get('scarab-level', '1'), 10) || 1);
-  let score = 0, levelStartScore = 0, combo = 0, streak = 0, rushing = true;
+  let score = 0, levelStartScore = 0, streak = 0, rushing = true;
   let cfg = levelCfg(level);
   let chain = [], shots = [], parts = [], rings = [], texts = [];
   let slowT = 0, reverseT = 0, shake = 0, beatT = 0, maxHead = 0, levelTime = 0;
@@ -387,7 +388,7 @@
     Sound.ensure();
     prepareLevel();
     shots = []; parts = []; rings = []; texts = [];
-    combo = 0; streak = 0; rushing = true;
+    streak = 0; rushing = true;
     slowT = reverseT = shake = beatT = 0;
     maxHead = 0; levelTime = 0;
     levelStartScore = score;
@@ -415,13 +416,16 @@
     }
   }
 
-  function removeRange(a, cnt) {
+  // Remove marbles; the gap left behind remembers the combo level that opened it
+  // (stored on the marble in front of the gap as .gc).
+  function removeRange(a, cnt, level) {
     const removed = chain.splice(a, cnt);
+    if (a > 0 && a < chain.length) chain[a - 1].gc = Math.max(chain[a - 1].gc || 0, level);
     for (const b of removed) { const p = at(b.rs); burst(p[0], p[1], b.c, 7); }
     return removed;
   }
 
-  function activatePower(p, x, y) {
+  function activatePower(p, x, y, level) {
     Sound.power(); buzz(35);
     rings.push({ x, y, r: 10, life: 0.5, max: 0.5 });
     if (p === 'slow') { slowT = 6; popText(x, y - 26, 'Slow-down!', true); }
@@ -434,9 +438,9 @@
       for (let i = chain.length - 1; i >= 0; i--) {
         const q = at(chain[i].s);
         if ((q[0] - x) ** 2 + (q[1] - y) ** 2 < 78 * 78 && chain[i].s > 0) {
-          const [b] = removeRange(i, 1);
+          const [b] = removeRange(i, 1, level);
           n++;
-          if (b.p) activatePower(b.p, q[0], q[1]);
+          if (b.p) activatePower(b.p, q[0], q[1], level);
         }
       }
       score += n * 10;
@@ -445,7 +449,8 @@
   }
 
   // Remove the run of same-coloured, touching marbles around index k if it is 3+ long.
-  function resolveMatch(k, fromShot) {
+  // level: 1 for a pop made by a shot, 2+ for each chain reaction that follows it.
+  function resolveMatch(k, level, fromShot) {
     if (k < 0 || k >= chain.length) return false;
     const c = chain[k].c;
     let a = k, b = k;
@@ -454,20 +459,20 @@
     const cnt = b - a + 1;
     if (cnt < 3) return false;
     if (fromShot) streak++;
-    const mult = Math.max(1, combo);
+    const mult = level;
     const streakBonus = fromShot && streak >= 3 ? streak * 10 : 0;
     const pts = cnt * 10 * mult + streakBonus;
     score += pts;
     const mid = at(chain[Math.floor((a + b) / 2)].rs);
     let label = '+' + pts;
-    if (combo > 1) label = `Combo ×${combo}  ` + label;
+    if (level > 1) label = `Combo ×${level}  ` + label;
     else if (streakBonus) label = `Streak ${streak}  ` + label;
-    popText(mid[0], mid[1], label, combo > 1);
-    Sound.pop(combo + Math.min(streak, 4));
-    buzz(combo > 1 ? 40 : 15);
-    if (combo > 1) shake = Math.max(shake, 4 + combo * 2);
-    const removed = removeRange(a, cnt);
-    for (const r of removed) if (r.p) { const p = at(r.rs); activatePower(r.p, p[0], p[1]); }
+    popText(mid[0], mid[1], label, level > 1);
+    Sound.pop(level + Math.min(streak, 4));
+    buzz(level > 1 ? 40 : 15);
+    if (level > 1) shake = Math.max(shake, 4 + level * 2);
+    const removed = removeRange(a, cnt, level);
+    for (const r of removed) if (r.p) { const p = at(r.rs); activatePower(r.p, p[0], p[1], level); }
     return true;
   }
 
@@ -479,15 +484,14 @@
   function stepChain(dt) {
     const n = chain.length;
     if (!n) return;
-    const starts = [0];
-    for (let i = 0; i < n - 1; i++) if (chain[i].s - chain[i + 1].s > D + 0.5) starts.push(i + 1);
+    // gaps[k] = index of the marble just in front of a gap.
+    const gaps = [];
+    for (let i = 0; i < n - 1; i++) if (chain[i].s - chain[i + 1].s > D + 0.5) gaps.push(i);
     // A front segment slides back when the marbles on both sides of its gap share a colour.
-    const retracting = new Set();
-    for (let k = 1; k < starts.length; k++) {
-      const a = starts[k] - 1, b = starts[k];
-      if (chain[a].c === chain[b].c) {
-        for (let i = starts[k - 1]; i <= a; i++) chain[i].s -= RETRACT_SPEED * dt;
-        retracting.add(a);
+    for (let k = 0; k < gaps.length; k++) {
+      const a = gaps[k];
+      if (chain[a].c === chain[a + 1].c) {
+        for (let i = k === 0 ? 0 : gaps[k - 1] + 1; i <= a; i++) chain[i].s -= RETRACT_SPEED * dt;
       }
     }
     if (rushing && chain[0].s >= PLEN * cfg.rush) rushing = false;
@@ -496,19 +500,20 @@
     if (slowT > 0) v *= 0.35;
     if (reverseT > 0) for (const b of chain) b.s -= 95 * dt;
     else chain[n - 1].s += v * dt;                           // only the last marble is pushed
-    let hit = -1;
-    for (let i = n - 2; i >= 0; i--) {
-      const need = chain[i + 1].s + D;
-      if (chain[i].s < need) {
-        if (retracting.has(i) && hit < 0) hit = i + 1;
-        chain[i].s = need;
-      }
+    settle();
+    // Every gap that closed this frame (touching or within the contact tolerance) is checked:
+    // matching colours meeting across it is the next step of that gap's combo.
+    for (let k = gaps.length - 1; k >= 0; k--) {
+      const a = gaps[k];
+      if (a + 1 >= chain.length || chain[a].s - chain[a + 1].s > D + 0.5) continue;
+      const level = (chain[a].gc || 0) + 1;
+      chain[a].gc = 0;
+      if (chain[a].c === chain[a + 1].c) resolveMatch(a + 1, level, false);
     }
-    if (hit >= 0) { combo++; if (!resolveMatch(hit, false)) combo = 0; else Sound.thud(); }
     if (chain.length) {
       if (!rushing) maxHead = Math.max(maxHead, chain[0].s);
       if (chain[0].s >= PLEN - R) {
-        state = 'drain'; combo = 0; streak = 0; slowT = reverseT = 0;
+        state = 'drain'; streak = 0; slowT = reverseT = 0;
         Sound.lose(); buzz([60, 40, 120]);
       }
     }
@@ -518,12 +523,12 @@
     const b = chain[i];
     const f = at(b.s + R), k = at(b.s - R);
     const front = (s.x - f[0]) ** 2 + (s.y - f[1]) ** 2 < (s.x - k[0]) ** 2 + (s.y - k[1]) ** 2;
-    const nb = { c: s.c, p: null, s: front ? b.s + D : b.s, rs: b.s + (front ? R : -R) };
+    const nb = { c: s.c, p: null, s: front ? b.s + D : b.s, rs: b.rs + (front ? R : -R) };
     const idx = front ? i : i + 1;
+    b.gc = 0;                       // a new shot starts a new reaction, not part of an old combo
     chain.splice(idx, 0, nb);
     settle();
-    combo = 1;
-    if (!resolveMatch(idx, true)) { combo = 0; streak = 0; Sound.thud(); }
+    if (!resolveMatch(idx, 1, true)) { streak = 0; Sound.thud(); }
   }
 
   function stepShots(dt) {
